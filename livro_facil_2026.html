@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Livro Fácil 2026 — Grupo Salta</title>
+<script>
+  try {
+    const temaSalvo = localStorage.getItem('lf_theme');
+    if (temaSalvo === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  } catch (e) {}
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  // ===== Mesmo projeto Firebase das outras ferramentas (prefixo de coleção próprio) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDhOZ-SHwT8FZrN-6HYOGx8wLpx8VhGu68",
+    authDomain: "ferramentadepara.firebaseapp.com",
+    projectId: "ferramentadepara",
+    storageBucket: "ferramentadepara.firebasestorage.app",
+    messagingSenderId: "909744800708",
+    appId: "1:909744800708:web:25c390afef260a5cf49a91"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+</script>
+<style>
+  :root { --bg:#f7f8fb; --card:#fff; --card-alt:#fbfcfe; --text:#172033; --muted:#647084; --line:#dce1ea; --brand:#6b3fa0; --brand2:#9c6ade; --warn:#a15c00; --danger:#b3261e; --ok:#137333; --header-grad-start:#6b3fa0; --th-bg:#f1f4f8; --brand-soft-bg:#f3ecfb; --brand-soft-border:#ddc9f2; --danger-soft-bg:#fff1f0; --danger-soft-border:#ffd0cc; --ok-soft-bg:#e9f6ee; --warn-soft-bg:#fff3df; --pill-bg:#eef2f7; --pill-text:#405066; --help-bg:#f8f5fc; --help-border:#e0d3f0; --help-text:#4b2e73; }
+  html[data-theme="dark"] { --bg:#12151a; --card:#1a1e25; --card-alt:#20252e; --text:#e9ebf0; --muted:#9199a8; --line:#2c3240; --brand:#b78ce8; --brand2:#cfa8f2; --warn:#e0a23c; --danger:#e2645c; --ok:#4fb789; --header-grad-start:#4b2e73; --th-bg:#20252e; --brand-soft-bg:rgba(183,140,232,.14); --brand-soft-border:rgba(183,140,232,.3); --danger-soft-bg:rgba(226,100,92,.14); --danger-soft-border:rgba(226,100,92,.3); --ok-soft-bg:rgba(79,183,137,.14); --warn-soft-bg:rgba(224,162,60,.14); --pill-bg:#232936; --pill-text:#b7c2d6; --help-bg:rgba(183,140,232,.08); --help-border:rgba(183,140,232,.25); --help-text:#d9c2f5; }
+  #themeToggle{ position:fixed; top:16px; right:16px; z-index:200; background:var(--card); border:1px solid var(--line); color:var(--text); width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+  #themeToggle:hover{ border-color:var(--brand2); }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:linear-gradient(120deg,var(--header-grad-start),#2b1a45); color:white; padding:22px 28px; }
+  header h1 { margin:0 0 8px; font-size:24px; }
+  header p { margin:0; opacity:.9; font-size:14px; max-width:1100px; }
+  header .header-row { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; padding:14px 20px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  nav button { border:1px solid var(--line); background:var(--card); padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:600; color:var(--text); }
+  nav button.active { background:var(--brand); color:white; border-color:var(--brand); }
+  main { padding:20px; max-width:1450px; margin:0 auto; }
+  .page { display:none; } .page.active { display:block; }
+  .grid { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:12px; align-items:end; }
+  .grid5 { display:grid; grid-template-columns:repeat(5,minmax(160px,1fr)); gap:12px; align-items:end; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:700; }
+  select, input { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--text); }
+  button.primary { background:var(--brand); color:white; border:none; border-radius:9px; padding:10px 13px; cursor:pointer; font-weight:700; }
+  button.secondary { background:var(--brand-soft-bg); color:var(--brand); border:1px solid var(--brand-soft-border); border-radius:9px; padding:9px 12px; cursor:pointer; font-weight:700; }
+  button.danger { background:var(--danger-soft-bg); color:var(--danger); border:1px solid var(--danger-soft-border); border-radius:9px; padding:9px 12px; cursor:pointer; font-weight:700; }
+  .table-wrap { overflow:auto; max-height:62vh; border:1px solid var(--line); border-radius:12px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); font-size:13px; }
+  th, td { padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { background:var(--th-bg); position:sticky; top:0; z-index:1; text-align:left; font-size:12px; color:var(--text); }
+  tr:hover td { background:var(--card-alt); }
+  .muted { color:var(--muted); font-size:13px; }
+  .stats { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:12px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .stat .num { font-size:24px; font-weight:800; margin-top:4px; }
+  .row-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .help { background:var(--help-bg); border:1px solid var(--help-border); color:var(--help-text); padding:12px; border-radius:12px; margin-bottom:12px; }
+  .small { font-size:12px; }
+  .wide { grid-column:span 2; }
+
+  /* ---- Login ---- */
+  #loginOverlay { position:fixed; inset:0; background:linear-gradient(120deg,var(--brand),#2b1a45); display:flex; align-items:center; justify-content:center; z-index:100; }
+  #loginBox { background:var(--card); border-radius:16px; padding:36px 32px; width:100%; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  #loginBox h2 { margin:0 0 6px; font-size:20px; color:var(--text); }
+  #loginBox p.sub { margin:0 0 22px; font-size:13px; color:var(--muted); }
+  #loginBox label { margin-top:14px; }
+  #loginBox label:first-of-type { margin-top:0; }
+  #loginError { color:var(--danger); font-size:13px; margin-top:12px; min-height:18px; }
+  #loginBox button.primary { width:100%; margin-top:20px; padding:11px; font-size:14px; }
+  #appWrap { display:none; }
+  #userBadge { display:flex; align-items:center; gap:10px; font-size:13px; }
+  #userBadge .name { font-weight:700; }
+  #userBadge .tag { background:rgba(255,255,255,.18); padding:3px 9px; border-radius:20px; font-size:11px; }
+  #userBadge button { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.4); color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; }
+  #userBadge button:hover { background:rgba(255,255,255,.25); }
+
+  #toastContainer { position:fixed; bottom:22px; right:22px; z-index:200; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+  .toast { padding:11px 18px; border-radius:10px; font-size:13px; font-weight:700; color:#fff; box-shadow:0 10px 28px rgba(0,0,0,.28); opacity:0; transform:translateY(12px); transition:opacity .22s ease, transform .22s ease; max-width:320px; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.toast-ok { background:var(--ok); }
+  .toast.toast-danger { background:var(--danger); }
+  .toast.toast-warn { background:#8a5a00; }
+  @media (max-width:900px) { .grid,.grid5,.stats { grid-template-columns:1fr; } .wide { grid-column:span 1; } nav { position:static; } }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>Livro Fácil 2026</h2>
+    <p class="sub" id="loginSub">Entre com seu e-mail e senha para acessar.</p>
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" autocomplete="username" placeholder="seu@email.com">
+    <label>Senha</label>
+    <input type="password" id="loginSenha" autocomplete="current-password" placeholder="Senha">
+    <div id="loginError"></div>
+    <button class="primary" id="loginBtn" onclick="tentarLogin()">Entrar</button>
+    <p class="small" style="text-align:center;margin-top:14px;">
+      <a href="#" id="loginToggleLink" onclick="alternarModoLogin();return false;">Primeiro acesso? Criar senha</a>
+      &nbsp;·&nbsp;
+      <a href="#" onclick="esqueciSenha();return false;">Esqueci minha senha</a>
+    </p>
+  </div>
+</div>
+
+<div id="appWrap">
+<button id="themeToggle" onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button>
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Livro Fácil 2026 — Grupo Salta</h1>
+      <p>Gestão da lista de livros de leitura complementar (Livro Fácil) por marca, unidade, turma e turno — base 2026.</p>
+    </div>
+    <div id="userBadge"></div>
+  </div>
+</header>
+<nav>
+  <button class="active" data-page="painel" onclick="mostrarPagina('painel')">1. Painel</button>
+  <button data-page="editar" onclick="mostrarPagina('editar')">2. Editar por unidade</button>
+  <button data-page="exportar" onclick="mostrarPagina('exportar')">3. Exportar</button>
+  <button data-page="basedados" onclick="mostrarPagina('basedados')" style="display:none;">4. Base de dados</button>
+  <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">5. Acessos</button>
+</nav>
+<main>
+  <section id="painel" class="page active">
+    <div class="card">
+      <h2>Painel geral</h2>
+      <div class="help">Visualize e filtre a lista completa (base 2026 + ajustes salvos). Use a aba "Editar por unidade" para adicionar ou remover títulos.</div>
+      <div class="stats" id="statsBox"></div>
+    </div>
+    <div class="card">
+      <div class="grid5">
+        <div><label>Marca</label><select id="pfMarca" onchange="atualizarPainelCascata(true); renderPainel()"></select></div>
+        <div><label>Unidade</label><select id="pfUnidade" onchange="atualizarPainelCascata(false); renderPainel()"></select></div>
+        <div><label>Turma</label><select id="pfTurma" onchange="renderPainel()"></select></div>
+        <div><label>Turno</label><select id="pfTurno" onchange="renderPainel()"></select></div>
+        <div><label>Busca (título, ISBN)</label><input id="pfBusca" oninput="renderPainel()" placeholder="Digite para buscar..."></div>
+      </div>
+    </div>
+    <div class="card"><div class="table-wrap"><table id="painelTable"></table></div></div>
+  </section>
+
+  <section id="editar" class="page">
+    <div class="card">
+      <h2>Editar por unidade</h2>
+      <div class="help">Selecione marca, unidade, turma e turno para ver, adicionar ou remover títulos. As alterações são salvas na nuvem (compartilhadas entre todos que usam a ferramenta).</div>
+      <div class="grid">
+        <div><label>Marca</label><select id="eMarca" onchange="atualizarCascataEdicao('marca'); renderEdicao();"></select></div>
+        <div><label>Unidade</label><select id="eUnidade" onchange="atualizarCascataEdicao('unidade'); renderEdicao();"></select></div>
+        <div><label>Turma</label><select id="eTurma" onchange="atualizarCascataEdicao('turma'); renderEdicao();"></select></div>
+        <div><label>Turno</label><select id="eTurno" onchange="renderEdicao()"></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row-actions" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>Títulos cadastrados para esta unidade/turma/turno</strong>
+        <button class="secondary" onclick="abrirFormAdicionar()">Adicionar título</button>
+      </div>
+      <div id="formAdicionar" style="display:none;margin-bottom:14px;padding:14px;background:var(--card-alt);border:1px solid var(--line);border-radius:12px;">
+        <div class="grid">
+          <div><label>ISBN</label><input id="nISBN" placeholder="Ex.: 9788508158270"></div>
+          <div class="wide"><label>Título / Descrição</label><input id="nDescricao" placeholder="Ex.: Éramos Seis"></div>
+        </div>
+        <div class="row-actions" style="margin-top:12px;">
+          <button class="primary" onclick="salvarNovoTitulo()">Salvar título</button>
+          <button class="secondary" onclick="fecharFormAdicionar()">Cancelar</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table id="edicaoTable"></table></div>
+    </div>
+  </section>
+
+  <section id="exportar" class="page">
+    <div class="card">
+      <h2>Exportar lista</h2>
+      <div class="help">Exporta a lista completa (base 2026 + ajustes) em CSV, respeitando os filtros abaixo.</div>
+      <div class="grid5">
+        <div><label>Marca</label><select id="xfMarca" onchange="atualizarPreviewExport()"></select></div>
+        <div><label>Unidade</label><select id="xfUnidade" onchange="atualizarPreviewExport()"></select></div>
+        <div><label>Turma</label><select id="xfTurma" onchange="atualizarPreviewExport()"></select></div>
+        <div><label>Turno</label><select id="xfTurno" onchange="atualizarPreviewExport()"></select></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="primary" onclick="exportarCSV()">Exportar CSV</button>
+      </div>
+      <p class="muted small" id="exportHint" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
+  <section id="basedados" class="page">
+    <div class="card">
+      <h2>Base de dados — enviar planilha</h2>
+      <div class="help">Suba aqui uma planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno, ISBN, DESCRICAO</strong> para <strong>substituir</strong> a base atual no Firestore. Os títulos que já existiam antes e continuam idênticos na planilha nova mantêm o mesmo identificador interno, então remoções feitas anteriormente continuam valendo. Títulos novos ou com qualquer campo diferente entram como registros novos.</div>
+      <div class="grid">
+        <div class="wide"><label>Arquivo (.xlsx, .xls ou .csv)</label><input type="file" id="baseArquivo" accept=".xlsx,.xls,.csv"></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="primary" onclick="processarUploadBase()">Processar e enviar para o Firestore</button>
+      </div>
+      <div id="baseUploadStatus" class="muted small" style="margin-top:10px;white-space:pre-wrap;"></div>
+      <p class="muted small" id="baseAtualInfo" style="margin-top:14px;"></p>
+    </div>
+  </section>
+
+  <section id="acessos" class="page">
+    <div class="card">
+      <h2>Acessos — diretores por marca</h2>
+      <div class="help">Cadastre aqui o e-mail de cada diretor e quais marcas ele pode ver e editar. Depois de cadastrado, o diretor acessa a ferramenta com esse e-mail e cria a própria senha na tela de login ("Primeiro acesso? Criar senha"). Um diretor pode ter mais de uma marca.</div>
+      <div class="grid">
+        <div class="wide">
+          <label>E-mail do diretor</label>
+          <input type="email" id="adminEmail" placeholder="diretor@escola.com.br">
+        </div>
+      </div>
+      <label style="margin-top:14px;">Marcas que este diretor pode acessar</label>
+      <div id="adminMarcasCheckboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid var(--line);border-radius:9px;max-height:220px;overflow:auto;"></div>
+      <div class="row-actions" style="margin-top:14px;">
+        <button class="primary" onclick="salvarDiretor()">Salvar diretor</button>
+        <button class="secondary" onclick="limparFormularioDiretor()">Limpar</button>
+      </div>
+      <div class="table-wrap" style="margin-top:10px;"><table id="adminTable"></table></div>
+    </div>
+  </section>
+</main>
+<div id="toastContainer"></div>
+</div>
+<script>
+function byId(id) { return document.getElementById(id); }
+function norm(s){ if(s===null||s===undefined) return ''; return String(s).trim().toLowerCase().replace(/\s+/g,' '); }
+function uniq(arr){ return [...new Set(arr.filter(v=>v!==undefined && v!==null && String(v).trim()!==''))]; }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+function slugify(s) { return String(s); } // ID do doc = nome da marca, igual ao padrão do De/Para
+
+/* ======================= TEMA CLARO/ESCURO ======================= */
+function aplicarTema(tema) {
+  document.documentElement.setAttribute('data-theme', tema);
+  const icone = tema === 'dark' ? '☀️' : '🌙';
+  const btn = byId('themeToggle'); if (btn) btn.innerText = icone;
+  try { localStorage.setItem('lf_theme', tema); } catch (e) {}
+}
+function alternarTema() {
+  const atual = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  aplicarTema(atual === 'dark' ? 'light' : 'dark');
+}
+aplicarTema(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+/* ======================= TOAST ======================= */
+function showToast(msg, tipo) {
+  const cont = byId('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + (tipo || 'ok');
+  el.innerText = msg;
+  cont.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 300); }, 3200);
+}
+
+/* ======================= NAVEGAÇÃO ======================= */
+function mostrarPagina(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
+  document.querySelectorAll('nav button[data-page]').forEach(b=>b.classList.toggle('active', b.dataset.page===id));
+  if (id==='painel') { atualizarPainelCascata(true); renderPainel(); }
+  if (id==='editar') { atualizarCascataEdicao('marca'); renderEdicao(); }
+  if (id==='exportar') atualizarPreviewExport();
+  if (id==='basedados') renderBaseAtualInfo();
+  if (id==='acessos') renderAdminUsuarios();
+}
+
+/* ======================= DADOS: BASE (Firestore) + EDIÇÕES (Firestore) ======================= */
+// A base 2026 mora no Firestore, um documento por marca (coleção livro_facil_base),
+// e as edições (remoções/adições) também, um documento por marca (livro_facil_edicoes).
+// Cada usuário só consegue ler/gravar os documentos das marcas que tem permissão
+// (isso é garantido pelas regras de segurança do Firestore, não só pela interface).
+let baseData = [];       // registros da base, já com o campo Marca preenchido
+let edicoesPorMarca = {}; // { marcaSlug: { removidos: [...], adicionados: [...] } }
+let unsubscribesEdicoes = [];
+let marcasCarregadas = []; // marcas cujo base+edições já foram buscadas
+
+async function carregarMarca(marca) {
+  const slug = slugify(marca);
+  // base (uma vez, muda raramente)
+  try {
+    const doc = await db.collection('livro_facil_base').doc(slug).get();
+    if (doc.exists) {
+      const registros = (doc.data().registros || []).map(r => ({ ...r, Marca: marca }));
+      baseData = baseData.filter(r => r.Marca !== marca).concat(registros);
+    } else {
+      showToast(`Ainda não há base no Firestore para "${marca}". Rode o migrador primeiro.`, 'warn');
+    }
+  } catch (e) {
+    showToast(`Erro ao carregar base de "${marca}": ` + e.message, 'danger');
+  }
+  // edições (tempo real, várias pessoas podem editar)
+  const unsub = db.collection('livro_facil_edicoes').doc(slug).onSnapshot(doc => {
+    edicoesPorMarca[slug] = doc.exists ? doc.data() : { removidos: [], adicionados: [] };
+    renderTudo();
+  }, e => showToast(`Erro ao sincronizar edições de "${marca}": ` + e.message, 'danger'));
+  unsubscribesEdicoes.push(unsub);
+  marcasCarregadas.push(marca);
+}
+
+async function carregarMarcasPermitidas(marcas) {
+  baseData = [];
+  edicoesPorMarca = {};
+  unsubscribesEdicoes.forEach(u => u());
+  unsubscribesEdicoes = [];
+  marcasCarregadas = [];
+  await Promise.all(marcas.map(m => carregarMarca(m)));
+}
+
+function dadosAtuais() {
+  const resultado = [];
+  marcasCarregadas.forEach(marca => {
+    const slug = slugify(marca);
+    const ed = edicoesPorMarca[slug] || { removidos: [], adicionados: [] };
+    const removidosSet = new Set(ed.removidos || []);
+    baseData.filter(r => r.Marca === marca && !removidosSet.has(r.id)).forEach(r => resultado.push(r));
+    (ed.adicionados || []).forEach(r => resultado.push({ ...r, Marca: marca }));
+  });
+  return resultado;
+}
+
+// dadosAtuais() já respeita a marca do diretor, pois só carregamos as marcas
+// permitidas para ele — mas mantemos o nome dadosVisiveis() para compatibilidade
+// com o resto do código.
+function dadosVisiveis() { return dadosAtuais(); }
+
+async function salvarEdicoesMarca(marca) {
+  const slug = slugify(marca);
+  const ed = edicoesPorMarca[slug] || { removidos: [], adicionados: [] };
+  try {
+    await db.collection('livro_facil_edicoes').doc(slug).set(ed);
+  } catch (e) {
+    console.error('Erro ao salvar edições', e);
+    showToast('Erro ao salvar: ' + e.message, 'danger');
+  }
+}
+
+function renderTudo() {
+  atualizarPainelCascata(false);
+  renderPainel();
+  atualizarCascataEdicao('marca');
+  renderEdicao();
+  atualizarPreviewExport();
+}
+
+/* ======================= FILTROS (selects) ======================= */
+function popularSelect(selectId, valores, comTodos) {
+  const sel = byId(selectId); if (!sel) return;
+  const atual = sel.value;
+  const distintos = uniq(valores).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+  sel.innerHTML = (comTodos ? '<option value="">Todos</option>' : '') + distintos.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+  if (distintos.includes(atual)) sel.value = atual;
+}
+
+/* ======================= PAINEL ======================= */
+function atualizarPainelCascata(resetDownstream) {
+  const dados = dadosVisiveis();
+  popularSelect('pfMarca', dados.map(r=>r.Marca), !restrictMarcas || restrictMarcas.length > 1);
+  const marca = byId('pfMarca').value;
+  if (resetDownstream) { byId('pfUnidade').value=''; byId('pfTurma').value=''; byId('pfTurno').value=''; }
+  popularSelect('pfUnidade', dados.filter(r=>!marca || r.Marca===marca).map(r=>r.Unidade), true);
+  const unidade = byId('pfUnidade').value;
+  popularSelect('pfTurma', dados.filter(r=>(!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade)).map(r=>r.Turma), true);
+  popularSelect('pfTurno', dados.filter(r=>(!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade)).map(r=>r.Turno), true);
+}
+
+function renderPainel() {
+  const dados = dadosVisiveis();
+  const fMarca = byId('pfMarca').value, fUnidade = byId('pfUnidade').value, fTurma = byId('pfTurma').value, fTurno = byId('pfTurno').value;
+  const busca = norm(byId('pfBusca').value);
+
+  let filtrados = dados.filter(r =>
+    (!fMarca || r.Marca === fMarca) &&
+    (!fUnidade || r.Unidade === fUnidade) &&
+    (!fTurma || r.Turma === fTurma) &&
+    (!fTurno || r.Turno === fTurno) &&
+    (!busca || norm(r.Descricao).includes(busca) || norm(r.ISBN).includes(busca))
+  );
+
+  const stats = byId('statsBox');
+  stats.innerHTML = `
+    <div class="stat"><div class="muted">Total de títulos</div><div class="num">${dados.length.toLocaleString('pt-BR')}</div></div>
+    <div class="stat"><div class="muted">Marcas</div><div class="num">${uniq(dados.map(r=>r.Marca)).length}</div></div>
+    <div class="stat"><div class="muted">Unidades</div><div class="num">${uniq(dados.map(r=>r.Unidade)).length}</div></div>
+    <div class="stat"><div class="muted">Resultado do filtro</div><div class="num">${filtrados.length.toLocaleString('pt-BR')}</div></div>
+  `;
+
+  const cols = ['Marca','Unidade','Turma','Turno','ISBN','Descricao'];
+  let html = '<thead><tr>' + cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
+  filtrados.slice(0, 3000).forEach(r => {
+    html += '<tr>' + cols.map(c=>`<td>${escapeHtml(r[c])}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody>';
+  byId('painelTable').innerHTML = html;
+}
+
+/* ======================= EDITAR POR UNIDADE ======================= */
+function atualizarCascataEdicao(nivel) {
+  const dados = dadosVisiveis();
+  popularSelect('eMarca', dados.map(r=>r.Marca), false);
+  if (restrictMarcas && restrictMarcas.length === 1) { byId('eMarca').value = restrictMarcas[0]; byId('eMarca').disabled = true; }
+  const marca = byId('eMarca').value;
+  popularSelect('eUnidade', dados.filter(r=>r.Marca===marca).map(r=>r.Unidade), false);
+  const unidade = byId('eUnidade').value;
+  popularSelect('eTurma', dados.filter(r=>r.Marca===marca && r.Unidade===unidade).map(r=>r.Turma), false);
+  const turma = byId('eTurma').value;
+  popularSelect('eTurno', dados.filter(r=>r.Marca===marca && r.Unidade===unidade && r.Turma===turma).map(r=>r.Turno), false);
+}
+
+function abrirFormAdicionar() {
+  byId('formAdicionar').style.display = 'block';
+}
+function fecharFormAdicionar() {
+  byId('formAdicionar').style.display = 'none';
+  byId('nISBN').value = ''; byId('nDescricao').value = '';
+}
+
+async function salvarNovoTitulo() {
+  const marca = byId('eMarca').value, unidade = byId('eUnidade').value, turma = byId('eTurma').value, turno = byId('eTurno').value;
+  if (!marca || !unidade || !turma || !turno) { showToast('Selecione marca, unidade, turma e turno primeiro.', 'warn'); return; }
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const descricao = byId('nDescricao').value.trim();
+  if (!descricao) { showToast('Informe o título/descrição.', 'warn'); return; }
+  const slug = slugify(marca);
+  if (!edicoesPorMarca[slug]) edicoesPorMarca[slug] = { removidos: [], adicionados: [] };
+  const ed = edicoesPorMarca[slug];
+  const proximo = (ed.adicionados || []).reduce((max,a)=>Math.max(max, parseInt(String(a.id).replace('A',''),10)||0), 0) + 1;
+  ed.adicionados = (ed.adicionados || []).concat([{
+    id: 'A' + String(proximo).padStart(5, '0'),
+    Unidade: unidade, Turma: turma, Turno: turno,
+    ISBN: byId('nISBN').value.trim(), Descricao: descricao
+  }]);
+  await salvarEdicoesMarca(marca);
+  fecharFormAdicionar();
+  showToast('Título adicionado.', 'ok');
+}
+
+async function removerTitulo(id, marca) {
+  if (!confirm('Remover este título da lista?')) return;
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const slug = slugify(marca);
+  if (!edicoesPorMarca[slug]) edicoesPorMarca[slug] = { removidos: [], adicionados: [] };
+  const ed = edicoesPorMarca[slug];
+  if (id.startsWith('A')) {
+    ed.adicionados = (ed.adicionados || []).filter(a => a.id !== id);
+  } else {
+    ed.removidos = ed.removidos || [];
+    if (!ed.removidos.includes(id)) ed.removidos.push(id);
+  }
+  await salvarEdicoesMarca(marca);
+  showToast('Título removido.', 'ok');
+}
+
+function renderEdicao() {
+  const marca = byId('eMarca').value, unidade = byId('eUnidade').value, turma = byId('eTurma').value, turno = byId('eTurno').value;
+  const dados = dadosVisiveis().filter(r => r.Marca === marca && r.Unidade === unidade && r.Turma === turma && r.Turno === turno);
+  const cols = ['ISBN','Descricao'];
+  let html = '<thead><tr>' + cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('') + '<th></th></tr></thead><tbody>';
+  dados.forEach(r => {
+    html += '<tr>' + cols.map(c=>`<td>${escapeHtml(r[c])}</td>`).join('') + `<td><button class="danger" onclick="removerTitulo('${r.id}','${escapeAttr(r.Marca)}')">Remover</button></td></tr>`;
+  });
+  html += '</tbody>';
+  byId('edicaoTable').innerHTML = html;
+}
+
+/* ======================= EXPORTAR ======================= */
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const cols = ['Marca','Unidade','Turma','Turno','ISBN','Descricao'];
+  const esc = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+  return [cols.map(esc).join(';')].concat(rows.map(r=>cols.map(c=>esc(r[c])).join(';'))).join('\n');
+}
+function downloadBlob(name, content, type) {
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+function linhasFiltradasExport() {
+  const dados = dadosVisiveis();
+  popularSelect('xfMarca', dados.map(r=>r.Marca), !restrictMarcas || restrictMarcas.length > 1);
+  const marca = byId('xfMarca').value;
+  popularSelect('xfUnidade', dados.filter(r=>!marca || r.Marca===marca).map(r=>r.Unidade), true);
+  const unidade = byId('xfUnidade').value;
+  popularSelect('xfTurma', dados.filter(r=>(!marca||r.Marca===marca) && (!unidade||r.Unidade===unidade)).map(r=>r.Turma), true);
+  popularSelect('xfTurno', dados.filter(r=>(!marca||r.Marca===marca) && (!unidade||r.Unidade===unidade)).map(r=>r.Turno), true);
+  const turma = byId('xfTurma').value, turno = byId('xfTurno').value;
+  return dados.filter(r => (!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade) && (!turma || r.Turma===turma) && (!turno || r.Turno===turno));
+}
+function atualizarPreviewExport() {
+  const linhas = linhasFiltradasExport();
+  byId('exportHint').innerText = `${linhas.length.toLocaleString('pt-BR')} linha(s) serão exportadas com os filtros atuais.`;
+}
+function exportarCSV() {
+  const linhas = linhasFiltradasExport();
+  downloadBlob('livro_facil_2026.csv', toCSV(linhas), 'text/csv;charset=utf-8');
+}
+
+/* ======================= LOGIN (Firebase) ======================= */
+let currentUser = null;
+let restrictMarcas = null; // array de marcas que um diretor pode ver/editar (null = admin, sem restrição)
+let modoCriarConta = false;
+let TODAS_MARCAS_CONHECIDAS = []; // preenchido após login, a partir de livro_facil_config/marcas
+
+function alternarModoLogin() {
+  modoCriarConta = !modoCriarConta;
+  byId('loginSub').innerText = modoCriarConta
+    ? 'Primeiro acesso: crie uma senha para o e-mail cadastrado pelo administrador.'
+    : 'Entre com seu e-mail e senha para acessar.';
+  byId('loginBtn').innerText = modoCriarConta ? 'Criar senha e entrar' : 'Entrar';
+  byId('loginBtn').onclick = modoCriarConta ? criarConta : tentarLogin;
+  byId('loginToggleLink').innerText = modoCriarConta ? 'Já tenho senha? Entrar' : 'Primeiro acesso? Criar senha';
+  byId('loginError').style.color = ''; byId('loginError').innerText = '';
+}
+
+async function buscarAutorizacao(email) {
+  const doc = await db.collection('livro_facil_usuarios').doc(norm(email)).get();
+  return doc.exists ? doc.data() : null;
+}
+
+async function esqueciSenha() {
+  const email = byId('loginEmail').value.trim();
+  byId('loginError').style.color = ''; byId('loginError').innerText = '';
+  if (!email) { byId('loginError').innerText = 'Digite seu e-mail no campo acima e clique em "Esqueci minha senha" de novo.'; return; }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    byId('loginError').style.color = 'var(--ok)';
+    byId('loginError').innerText = 'Enviamos um link de redefinição para ' + email + '. Verifique também a caixa de spam.';
+  } catch (e) {
+    byId('loginError').style.color = 'var(--danger)';
+    if (e.code === 'auth/user-not-found') byId('loginError').innerText = 'Não existe conta com esse e-mail ainda. Use "Primeiro acesso? Criar senha".';
+    else byId('loginError').innerText = 'Não foi possível enviar o e-mail: ' + e.message;
+  }
+}
+
+async function tentarLogin() {
+  const email = byId('loginEmail').value.trim();
+  const senha = byId('loginSenha').value;
+  byId('loginError').style.color = ''; byId('loginError').innerText = '';
+  if (!email || !senha) { byId('loginError').innerText = 'Preencha e-mail e senha.'; return; }
+  try { await auth.signInWithEmailAndPassword(email, senha); }
+  catch (e) { byId('loginError').innerText = 'E-mail ou senha incorretos.'; return; }
+}
+
+async function criarConta() {
+  const email = byId('loginEmail').value.trim();
+  const senha = byId('loginSenha').value;
+  byId('loginError').style.color = ''; byId('loginError').innerText = '';
+  if (!email || !senha) { byId('loginError').innerText = 'Preencha e-mail e senha.'; return; }
+  if (senha.length < 6) { byId('loginError').innerText = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  let credencial;
+  try { credencial = await auth.createUserWithEmailAndPassword(email, senha); }
+  catch (e) {
+    if (e.code === 'auth/email-already-in-use') byId('loginError').innerText = 'Já existe uma senha para este e-mail. Use "Entrar".';
+    else byId('loginError').innerText = 'Não foi possível criar a senha: ' + e.message;
+    return;
+  }
+  try {
+    const autorizado = await garantirAutorizacaoOuBootstrap(email);
+    if (!autorizado) {
+      byId('loginError').innerText = 'Este e-mail ainda não foi cadastrado pelo administrador.';
+      await credencial.user.delete().catch(() => {});
+      await auth.signOut();
+      return;
+    }
+  } catch (e) {
+    byId('loginError').innerText = 'Erro ao verificar autorização: ' + e.message;
+    await credencial.user.delete().catch(() => {});
+    await auth.signOut();
+    return;
+  }
+}
+
+async function garantirAutorizacaoOuBootstrap(email) {
+  const existente = await buscarAutorizacao(email);
+  if (existente) return true;
+  const algum = await db.collection('livro_facil_usuarios').limit(1).get();
+  if (algum.empty) {
+    await db.collection('livro_facil_usuarios').doc(norm(email)).set({ email: norm(email), papel: 'admin', marcas: [] });
+    return true;
+  }
+  return false;
+}
+
+async function processarLoginAutenticado(email) {
+  let autorizacao;
+  try { autorizacao = await buscarAutorizacao(email); }
+  catch (e) {
+    byId('loginError').innerText = 'Erro ao verificar autorização: ' + e.message;
+    await auth.signOut();
+    return;
+  }
+  if (!autorizacao) {
+    byId('loginError').innerText = 'Seu e-mail não está autorizado. Peça para o administrador te cadastrar na aba Acessos.';
+    await auth.signOut();
+    return;
+  }
+  currentUser = { email: norm(email), papel: autorizacao.papel, marcas: autorizacao.marcas || [] };
+  await mostrarApp();
+}
+
+function logout() {
+  unsubscribesEdicoes.forEach(u => u());
+  unsubscribesEdicoes = [];
+  currentUser = null;
+  restrictMarcas = null;
+  auth.signOut();
+  location.reload();
+}
+
+async function carregarListaDeMarcas() {
+  try {
+    const doc = await db.collection('livro_facil_config').doc('marcas').get();
+    if (doc.exists) return doc.data().lista || [];
+  } catch (e) { console.error(e); }
+  return [];
+}
+
+async function mostrarApp() {
+  byId('loginOverlay').style.display = 'none';
+  byId('appWrap').style.display = 'block';
+  const isAdmin = currentUser.papel === 'admin';
+  const tag = isAdmin ? 'Admin' : ('Diretor · ' + currentUser.marcas.map(escapeHtml).join(', '));
+  byId('userBadge').innerHTML = `<div class="name">${escapeHtml(currentUser.email)}</div><div class="tag">${tag}</div><button onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button><button onclick="logout()">Sair</button>`;
+  document.querySelectorAll('nav button[data-page="acessos"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('nav button[data-page="basedados"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
+  showToast('Carregando dados da nuvem...', 'ok');
+
+  TODAS_MARCAS_CONHECIDAS = await carregarListaDeMarcas();
+  if (isAdmin) {
+    restrictMarcas = null;
+    await carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
+    renderAdminUsuarios();
+  } else {
+    restrictMarcas = currentUser.marcas;
+    await carregarMarcasPermitidas(currentUser.marcas);
+  }
+  renderTudo();
+  if (!marcasCarregadas.length) showToast('Nenhuma marca carregada — confira se o migrador já rodou e se livro_facil_config/marcas existe.', 'warn');
+}
+
+/* ======================= BASE DE DADOS (admin) — upload de planilha ======================= */
+// Hash estável a partir dos campos-chave do registro: assim, se a mesma linha
+// (mesma Marca/Unidade/Turma/Turno/ISBN/Descrição) aparecer numa planilha nova,
+// ela recebe o MESMO id de antes — então remoções salvas continuam valendo.
+function hashId(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return 'L' + (h >>> 0).toString(36);
+}
+
+function limparCampo(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/\t/g, ' ').trim().replace(/\s+/g, ' ');
+}
+
+function renderBaseAtualInfo() {
+  const el = byId('baseAtualInfo'); if (!el) return;
+  if (!TODAS_MARCAS_CONHECIDAS.length) { el.innerText = 'Nenhuma base carregada ainda no Firestore.'; return; }
+  el.innerText = `Base atual: ${TODAS_MARCAS_CONHECIDAS.length} marca(s) — ${dadosAtuais().length.toLocaleString('pt-BR')} título(s) no total (considerando apenas as marcas já carregadas nesta sessão).`;
+}
+
+async function processarUploadBase() {
+  const arquivo = byId('baseArquivo').files[0];
+  const status = byId('baseUploadStatus');
+  if (!arquivo) { alert('Selecione o arquivo primeiro.'); return; }
+  status.innerText = 'Lendo arquivo...';
+  try {
+    const buf = await arquivo.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rowsRaw = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+    const porMarca = {};
+    let ignoradas = 0;
+    rowsRaw.forEach(row => {
+      const marca = limparCampo(row['Marca']);
+      const unidade = limparCampo(row['Unidade']);
+      const turma = limparCampo(row['Turma']);
+      const turno = limparCampo(row['Turno']);
+      const isbn = limparCampo(row['ISBN']);
+      const descricao = limparCampo(row['DESCRICAO'] ?? row['Descricao'] ?? row['Descrição']);
+      if (!marca || !unidade || !turma || !turno || !descricao) { ignoradas++; return; }
+      const id = hashId([marca, unidade, turma, turno, isbn, descricao].join('|'));
+      if (!porMarca[marca]) porMarca[marca] = [];
+      porMarca[marca].push({ id, Unidade: unidade, Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao });
+    });
+
+    const marcas = Object.keys(porMarca).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (!marcas.length) { status.innerText = 'Nenhuma linha válida encontrada. Confira as colunas: Marca, Unidade, Turma, Turno, ISBN, DESCRICAO.'; return; }
+
+    status.innerText = `Enviando ${marcas.length} marca(s) para o Firestore...`;
+    for (const marca of marcas) {
+      await db.collection('livro_facil_base').doc(marca).set({ marca, registros: porMarca[marca] });
+      status.innerText += `\nOK  ${marca} — ${porMarca[marca].length} títulos`;
+    }
+    await db.collection('livro_facil_config').doc('marcas').set({ lista: marcas });
+    status.innerText += `\n\nConcluído. ${ignoradas ? ignoradas + ' linha(s) ignorada(s) por falta de algum campo obrigatório.' : ''}`;
+    showToast('Base atualizada no Firestore.', 'ok');
+
+    // recarrega a base na tela sem precisar deslogar
+    TODAS_MARCAS_CONHECIDAS = marcas;
+    await carregarMarcasPermitidas(marcas);
+    renderTudo();
+    renderBaseAtualInfo();
+  } catch (e) {
+    status.innerText = 'Erro ao processar o arquivo: ' + e.message;
+    showToast('Erro ao enviar base: ' + e.message, 'danger');
+  }
+}
+
+/* ======================= ACESSOS (admin) ======================= */
+function popularCheckboxesMarcas(selecionadas) {
+  const sel = new Set(selecionadas || []);
+  byId('adminMarcasCheckboxes').innerHTML = TODAS_MARCAS_CONHECIDAS.map(m => `
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin:0;width:auto;">
+      <input type="checkbox" value="${escapeAttr(m)}" ${sel.has(m) ? 'checked' : ''} style="width:auto;">
+      ${escapeHtml(m)}
+    </label>
+  `).join('');
+}
+
+function limparFormularioDiretor() {
+  byId('adminEmail').value = '';
+  byId('adminEmail').disabled = false;
+  popularCheckboxesMarcas([]);
+}
+
+function editarDiretor(email, marcas) {
+  byId('adminEmail').value = email;
+  byId('adminEmail').disabled = true;
+  popularCheckboxesMarcas(marcas);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function salvarDiretor() {
+  const email = norm(byId('adminEmail').value.trim());
+  if (!email || !email.includes('@')) { alert('Informe um e-mail válido.'); return; }
+  const marcas = Array.from(document.querySelectorAll('#adminMarcasCheckboxes input:checked')).map(el => el.value);
+  if (!marcas.length) { alert('Selecione ao menos uma marca.'); return; }
+  try {
+    await db.collection('livro_facil_usuarios').doc(email).set({ email, papel: 'diretor', marcas });
+    showToast('Diretor salvo: ' + email, 'ok');
+    limparFormularioDiretor();
+    renderAdminUsuarios();
+  } catch (e) {
+    showToast('Erro ao salvar diretor: ' + e.message, 'danger');
+  }
+}
+
+async function removerDiretor(email) {
+  if (!confirm('Remover o acesso de ' + email + '? Ele deixa de conseguir ver/editar a lista (a senha dele continua existindo, mas sem autorização).')) return;
+  try {
+    await db.collection('livro_facil_usuarios').doc(email).delete();
+    showToast('Diretor removido', 'warn');
+    renderAdminUsuarios();
+  } catch (e) {
+    showToast('Erro ao remover: ' + e.message, 'danger');
+  }
+}
+
+function renderAdminUsuarios() {
+  popularCheckboxesMarcas([]);
+  db.collection('livro_facil_usuarios').where('papel', '==', 'diretor').get().then(snapshot => {
+    const docs = [];
+    snapshot.forEach(doc => docs.push(doc.data()));
+    docs.sort((a, b) => a.email.localeCompare(b.email));
+    let html = '<thead><tr><th>E-mail</th><th>Marcas</th><th>Ação</th></tr></thead><tbody>';
+    docs.forEach((d, i) => {
+      html += `<tr><td>${escapeHtml(d.email)}</td><td>${(d.marcas || []).map(escapeHtml).join(', ')}</td><td class="row-actions"><button class="secondary" data-idx="${i}" data-action="editar">Editar</button><button class="danger" data-idx="${i}" data-action="remover">Remover</button></td></tr>`;
+    });
+    html += '</tbody>';
+    byId('adminTable').innerHTML = html;
+    byId('adminTable').querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = docs[Number(btn.dataset.idx)];
+        if (btn.dataset.action === 'editar') editarDiretor(d.email, d.marcas || []);
+        else removerDiretor(d.email);
+      });
+    });
+  }).catch(e => showToast('Erro ao carregar diretores: ' + e.message, 'danger'));
+}
+
+/* ======================= INICIALIZAÇÃO ======================= */
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    await processarLoginAutenticado(user.email);
+  } else if (currentUser) {
+    currentUser = null;
+    byId('loginOverlay').style.display = 'flex';
+    byId('appWrap').style.display = 'none';
+  }
+});
+
+window.addEventListener('load', () => {
+  byId('loginEmail').focus();
+  byId('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') (modoCriarConta ? criarConta() : tentarLogin()); });
+  byId('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') byId('loginSenha').focus(); });
+});
+</script>
+</body>
+</html>
