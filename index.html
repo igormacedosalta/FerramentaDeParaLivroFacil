@@ -988,6 +988,7 @@ async function processarUploadBase() {
     let ignoradas = 0;
     rowsRaw.forEach(row => {
       const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = normalizarTurma(row['Turma']), turno = normalizarTurma(row['Turno']);
+      const isbn = limparCampo(row['ISBN']);
       const descricao = limparCampo(row['DESCRICAO'] ?? row['Descricao'] ?? row['Descrição']);
       if (!marca || !unidade || !turma || !turno || !descricao) { ignoradas++; return; }
       if (!porMarcaBruto[marca]) porMarcaBruto[marca] = [];
