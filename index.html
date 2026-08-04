@@ -130,7 +130,8 @@
   <button data-page="novasunidades" onclick="mostrarPagina('novasunidades')">4. Novas unidades</button>
   <button data-page="exportar" onclick="mostrarPagina('exportar')">5. Exportar</button>
   <button data-page="basedados" onclick="mostrarPagina('basedados')" style="display:none;">6. Base de dados</button>
-  <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">7. Acessos</button>
+  <button data-page="historico" onclick="mostrarPagina('historico')" style="display:none;">7. Histórico</button>
+  <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">8. Acessos</button>
 </nav>
 <main>
   <section id="painel" class="page active">
@@ -299,6 +300,20 @@
     </div>
   </section>
 
+  <section id="historico" class="page">
+    <div class="card">
+      <h2>Histórico de alterações</h2>
+      <div class="help">Consolida todas as mudanças feitas na ferramenta (regra geral, exceções, unidades, marcas), de todos os usuários. Só o admin vê esta aba.</div>
+      <div class="grid">
+        <div><label>Filtrar por marca</label><select id="hMarca" onchange="renderHistorico()"></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table id="historicoTable"></table></div>
+      <p class="muted small" id="historicoInfo" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
   <section id="acessos" class="page">
     <div class="card">
       <h2>Acessos — diretores por marca</h2>
@@ -373,6 +388,7 @@ function mostrarPagina(id) {
   if (id==='novasunidades') { popularSelectMarcaTravavel('uMarca'); popularSelect('ufMarca', marcasPermitidas(), true); renderUnidades(); }
   if (id==='exportar') atualizarPreviewExport();
   if (id==='basedados') renderBaseAtualInfo();
+  if (id==='historico') renderHistorico();
   if (id==='acessos') renderAdminUsuarios();
 }
 
@@ -553,6 +569,7 @@ async function salvarItemRegra() {
   if (regraPorMarca[marca].some(r=>r.id===id)) { showToast('Este título já está na regra geral.', 'warn'); return; }
   regraPorMarca[marca] = regraPorMarca[marca].concat([{ id, Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao }]);
   await salvarRegraMarca(marca);
+  await registrarHistorico(marca, `Adicionou "${descricao}" (ISBN ${isbn || '—'}) à regra geral — ${turma} · ${turno}`);
   fecharFormRegra();
   showToast('Título adicionado à regra geral.', 'ok');
 }
@@ -561,8 +578,10 @@ async function removerItemRegra(id) {
   const marca = byId('rMarca').value;
   if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
   if (!confirm('Remover este título da regra geral? Ele deixa de valer para todas as unidades que seguem essa regra (unidades que já tinham ele como exceção "adicionar" continuam com ele).')) return;
+  const item = (regraPorMarca[marca] || []).find(r => r.id === id);
   regraPorMarca[marca] = (regraPorMarca[marca] || []).filter(r => r.id !== id);
   await salvarRegraMarca(marca);
+  if (item) await registrarHistorico(marca, `Removeu "${item.Descricao}" (ISBN ${item.ISBN || '—'}) da regra geral — ${item.Turma} · ${item.Turno}`);
   showToast('Removido da regra geral.', 'ok');
 }
 
@@ -627,6 +646,7 @@ async function salvarExcecaoAdicionar() {
   if (excecoesPorMarca[marca].some(e=>e.id===id)) { showToast('Essa exceção já existe.', 'warn'); return; }
   excecoesPorMarca[marca] = excecoesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno, tipo: 'adicionar', ISBN: isbn, Descricao: descricao }]);
   await salvarExcecoesMarca(marca);
+  await registrarHistorico(marca, `Exceção: adicionou "${descricao}" só para ${unidade} — ${turma} · ${turno}`);
   fecharFormExcecoes();
   showToast('Exceção salva.', 'ok');
 }
@@ -643,6 +663,7 @@ async function salvarExcecaoRemover() {
   if (excecoesPorMarca[marca].some(e=>e.id===id)) { showToast('Essa exceção já existe.', 'warn'); return; }
   excecoesPorMarca[marca] = excecoesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno, tipo: 'remover', ISBN: isbn, Descricao: descricao }]);
   await salvarExcecoesMarca(marca);
+  await registrarHistorico(marca, `Exceção: ${unidade} passou a NÃO usar "${descricao}" (que está na regra geral) — ${turma} · ${turno}`);
   fecharFormExcecoes();
   showToast('Exceção salva.', 'ok');
 }
@@ -651,8 +672,10 @@ async function removerExcecao(id) {
   const marca = byId('xMarca').value;
   if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
   if (!confirm('Remover esta exceção?')) return;
+  const item = (excecoesPorMarca[marca] || []).find(e => e.id === id);
   excecoesPorMarca[marca] = (excecoesPorMarca[marca] || []).filter(e => e.id !== id);
   await salvarExcecoesMarca(marca);
+  if (item) await registrarHistorico(marca, `Removeu exceção (${item.tipo}) de ${item.Unidade} — ${item.Turma} · ${item.Turno}: "${item.Descricao}"`);
   showToast('Exceção removida.', 'ok');
 }
 
@@ -674,6 +697,7 @@ async function salvarNovaUnidade() {
   if (unidadesPorMarca[marca].some(u=>u.id===id)) { showToast('Essa unidade/série/turno já existe.', 'warn'); return; }
   unidadesPorMarca[marca] = unidadesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno }]);
   await salvarUnidadesMarca(marca);
+  await registrarHistorico(marca, `Adicionou unidade "${unidade}" — ${turma} · ${turno}`);
   byId('uUnidade').value=''; byId('uTurma').value=''; byId('uTurno').value='';
   showToast('Unidade adicionada — já segue a regra geral automaticamente.', 'ok');
 }
@@ -699,11 +723,13 @@ async function processarUploadUnidades() {
     });
     for (const marca of Object.keys(porMarca)) {
       if (!unidadesPorMarca[marca]) unidadesPorMarca[marca] = [];
+      let adicionadasMarca = 0;
       porMarca[marca].forEach(({ unidade, turma, turno }) => {
         const id = hashId([marca,unidade,turma,turno].join('|'));
-        if (!unidadesPorMarca[marca].some(u=>u.id===id)) { unidadesPorMarca[marca].push({ id, Unidade: unidade, Turma: turma, Turno: turno }); adicionadas++; }
+        if (!unidadesPorMarca[marca].some(u=>u.id===id)) { unidadesPorMarca[marca].push({ id, Unidade: unidade, Turma: turma, Turno: turno }); adicionadas++; adicionadasMarca++; }
       });
       await salvarUnidadesMarca(marca);
+      if (adicionadasMarca) await registrarHistorico(marca, `Upload de planilha de unidades: adicionou ${adicionadasMarca} combinação(ões) de unidade/série/turno`);
     }
     status.innerText = `Concluído: ${adicionadas} combinação(ões) adicionada(s). ${ignoradas ? ignoradas + ' linha(s) ignorada(s) (marca sem permissão ou campo faltando).' : ''}`;
     showToast('Unidades atualizadas.', 'ok');
@@ -720,8 +746,10 @@ async function salvarUnidadesMarca(marca) {
 async function removerUnidade(marca, id) {
   if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
   if (!confirm('Remover esta combinação de unidade/série/turno? Ela deixa de aparecer no Painel e na Exportação.')) return;
+  const item = (unidadesPorMarca[marca] || []).find(u => u.id === id);
   unidadesPorMarca[marca] = (unidadesPorMarca[marca] || []).filter(u => u.id !== id);
   await salvarUnidadesMarca(marca);
+  if (item) await registrarHistorico(marca, `Removeu unidade "${item.Unidade}" — ${item.Turma} · ${item.Turno}`);
   showToast('Unidade removida.', 'ok');
 }
 
@@ -896,6 +924,7 @@ async function mostrarApp() {
   byId('userBadge').innerHTML = `<div class="name">${escapeHtml(currentUser.email)}</div><div class="tag">${tag}</div><button id="themeToggle" onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button><button onclick="logout()">Sair</button>`;
   document.querySelectorAll('nav button[data-page="acessos"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('nav button[data-page="basedados"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('nav button[data-page="historico"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   showToast('Carregando dados da nuvem...', 'ok');
 
   TODAS_MARCAS_CONHECIDAS = await carregarListaDeMarcas();
@@ -927,6 +956,7 @@ async function adicionarMarcaNova() {
     byId('novaMarcaNome').value = '';
     carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
     renderTudo();
+    await registrarHistorico(nome, `Cadastrou a marca "${nome}" (sem base histórica)`);
     showToast(`Marca "${nome}" cadastrada. Agora vá em "Novas unidades" para adicionar as unidades, e em "Regra geral" para montar a lista.`, 'ok');
   } catch (e) {
     showToast('Erro ao adicionar marca: ' + e.message, 'danger');
@@ -1021,6 +1051,7 @@ async function processarUploadBase() {
       await db.collection('livro_facil_unidades').doc(marca).set({ marca, lista: unidadesLista });
       await db.collection('livro_facil_excecoes').doc(marca).set({ marca, itens: excecoesItens });
       status.innerText += `\nOK  ${marca} — ${unidadesLista.length} unidade(s), ${regraItens.length} título(s) na regra, ${excecoesItens.length} exceção(ões)`;
+      await registrarHistorico(marca, `Upload de base completa: substituiu por ${unidadesLista.length} unidade(s), ${regraItens.length} título(s) na regra geral e ${excecoesItens.length} exceção(ões)`);
     }
 
     const listaFinal = [...new Set([...TODAS_MARCAS_CONHECIDAS, ...marcas])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
@@ -1036,6 +1067,41 @@ async function processarUploadBase() {
     status.innerText = 'Erro ao processar o arquivo: ' + e.message;
     showToast('Erro ao enviar base: ' + e.message, 'danger');
   }
+}
+
+/* ======================= HISTÓRICO (admin) ======================= */
+async function registrarHistorico(marca, acao) {
+  try {
+    await db.collection('livro_facil_historico').add({
+      ts: new Date().toISOString(),
+      email: currentUser ? currentUser.email : '(desconhecido)',
+      marca: marca || '(geral)',
+      acao
+    });
+  } catch (e) {
+    console.error('Erro ao registrar histórico', e);
+  }
+}
+
+function renderHistorico() {
+  popularSelect('hMarca', TODAS_MARCAS_CONHECIDAS, true);
+  const marcaFiltro = byId('hMarca').value;
+  byId('historicoInfo').innerText = 'Carregando...';
+  db.collection('livro_facil_historico').orderBy('ts', 'desc').limit(500).get().then(snapshot => {
+    let linhas = [];
+    snapshot.forEach(doc => linhas.push(doc.data()));
+    if (marcaFiltro) linhas = linhas.filter(l => l.marca === marcaFiltro);
+    let html = '<thead><tr><th>Data/Hora</th><th>E-mail</th><th>Marca</th><th>Ação</th></tr></thead><tbody>';
+    linhas.forEach(l => {
+      const dataFormatada = new Date(l.ts).toLocaleString('pt-BR');
+      html += `<tr><td>${escapeHtml(dataFormatada)}</td><td>${escapeHtml(l.email)}</td><td>${escapeHtml(l.marca)}</td><td>${escapeHtml(l.acao)}</td></tr>`;
+    });
+    html += '</tbody>';
+    byId('historicoTable').innerHTML = html;
+    byId('historicoInfo').innerText = `${linhas.length.toLocaleString('pt-BR')} registro(s) — mostrando os 500 mais recentes no total, antes do filtro de marca.`;
+  }).catch(e => {
+    byId('historicoInfo').innerText = 'Erro ao carregar histórico: ' + e.message;
+  });
 }
 
 /* ======================= ACESSOS (admin) ======================= */
