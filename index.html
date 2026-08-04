@@ -319,6 +319,10 @@ function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'
 function escapeAttr(s) { return escapeHtml(s); }
 function slugify(s) { return String(s); } // ID do doc = nome da marca, igual ao padrão do De/Para
 function limparCampo(v) { if (v === null || v === undefined) return ''; return String(v).replace(/\t/g,' ').trim().replace(/\s+/g,' '); }
+// Normaliza capitalização de Série/Turno (ex.: "2º ano" e "2º Ano" viram a mesma opção).
+function normalizarTurma(v) {
+  return limparCampo(v).split(' ').map(w => w.length ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
+}
 function hashId(str) {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
@@ -379,15 +383,15 @@ function marcasPermitidas() { return restrictMarcas || TODAS_MARCAS_CONHECIDAS; 
 
 function carregarMarca(marca) {
   const u1 = db.collection('livro_facil_regra').doc(marca).onSnapshot(doc => {
-    regraPorMarca[marca] = doc.exists ? (doc.data().itens || []) : [];
+    regraPorMarca[marca] = (doc.exists ? (doc.data().itens || []) : []).map(r => ({ ...r, Turma: normalizarTurma(r.Turma), Turno: normalizarTurma(r.Turno) }));
     renderTudo();
   }, e => showToast(`Erro ao sincronizar regra de "${marca}": ` + e.message, 'danger'));
   const u2 = db.collection('livro_facil_unidades').doc(marca).onSnapshot(doc => {
-    unidadesPorMarca[marca] = doc.exists ? (doc.data().lista || []) : [];
+    unidadesPorMarca[marca] = (doc.exists ? (doc.data().lista || []) : []).map(u => ({ ...u, Turma: normalizarTurma(u.Turma), Turno: normalizarTurma(u.Turno) }));
     renderTudo();
   }, e => showToast(`Erro ao sincronizar unidades de "${marca}": ` + e.message, 'danger'));
   const u3 = db.collection('livro_facil_excecoes').doc(marca).onSnapshot(doc => {
-    excecoesPorMarca[marca] = doc.exists ? (doc.data().itens || []) : [];
+    excecoesPorMarca[marca] = (doc.exists ? (doc.data().itens || []) : []).map(e => ({ ...e, Turma: normalizarTurma(e.Turma), Turno: normalizarTurma(e.Turno) }));
     renderTudo();
   }, e => showToast(`Erro ao sincronizar exceções de "${marca}": ` + e.message, 'danger'));
   unsubscribes.push(u1, u2, u3);
@@ -651,8 +655,8 @@ async function salvarExcecoesMarca(marca) {
 async function salvarNovaUnidade() {
   const marca = byId('uMarca').value;
   const unidade = limparCampo(byId('uUnidade').value);
-  const turma = limparCampo(byId('uTurma').value);
-  const turno = limparCampo(byId('uTurno').value);
+  const turma = normalizarTurma(byId('uTurma').value);
+  const turno = normalizarTurma(byId('uTurno').value);
   if (!marca || !unidade || !turma || !turno) { showToast('Preencha marca, unidade, série e turno.', 'warn'); return; }
   if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
   const id = hashId([marca,unidade,turma,turno].join('|'));
@@ -677,7 +681,7 @@ async function processarUploadUnidades() {
     let adicionadas = 0, ignoradas = 0;
     const porMarca = {};
     rows.forEach(row => {
-      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = limparCampo(row['Turma']), turno = limparCampo(row['Turno']);
+      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = normalizarTurma(row['Turma']), turno = normalizarTurma(row['Turno']);
       if (!marca || !unidade || !turma || !turno) { ignoradas++; return; }
       if (restrictMarcas && !restrictMarcas.includes(marca)) { ignoradas++; return; }
       if (!porMarca[marca]) porMarca[marca] = [];
@@ -922,8 +926,7 @@ async function processarUploadBase() {
     const porMarcaBruto = {};
     let ignoradas = 0;
     rowsRaw.forEach(row => {
-      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = limparCampo(row['Turma']), turno = limparCampo(row['Turno']);
-      const isbn = limparCampo(row['ISBN']);
+      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = normalizarTurma(row['Turma']), turno = normalizarTurma(row['Turno']);
       const descricao = limparCampo(row['DESCRICAO'] ?? row['Descricao'] ?? row['Descrição']);
       if (!marca || !unidade || !turma || !turno || !descricao) { ignoradas++; return; }
       if (!porMarcaBruto[marca]) porMarcaBruto[marca] = [];
