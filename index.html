@@ -276,6 +276,16 @@
 
   <section id="basedados" class="page">
     <div class="card">
+      <h2>Cadastrar marca nova (sem base histórica)</h2>
+      <div class="help">Use isto quando uma marca vai começar a usar a Livro Fácil pela primeira vez e não existe planilha de anos anteriores. Depois de cadastrar aqui, vá em "Novas unidades" para adicionar as unidades da marca, e em "Regra geral" para montar a lista de títulos do zero.</div>
+      <div class="grid">
+        <div class="wide"><label>Nome da marca</label><input id="novaMarcaNome" placeholder="Ex.: Colégio Exemplo"></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="primary" onclick="adicionarMarcaNova()">Adicionar marca</button>
+      </div>
+    </div>
+    <div class="card">
       <h2>Base de dados — enviar planilha</h2>
       <div class="help">Suba aqui uma planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno, ISBN, DESCRICAO</strong> para <strong>substituir por completo</strong> a regra geral, as unidades e as exceções das marcas presentes no arquivo. A ferramenta calcula sozinha: o que é igual em todas as unidades de uma série/turno vira <em>regra geral</em>; o que só existe em algumas unidades vira <em>exceção</em>. Use isso para uma recarga completa da base (ex.: início de um novo ciclo). Para ajustes do dia a dia, use as abas Regra geral / Exceções / Novas unidades.</div>
       <div class="grid">
@@ -903,6 +913,27 @@ async function mostrarApp() {
 }
 
 /* ======================= BASE DE DADOS (admin) — upload de planilha completa ======================= */
+async function adicionarMarcaNova() {
+  const nome = limparCampo(byId('novaMarcaNome').value);
+  if (!nome) { showToast('Informe o nome da marca.', 'warn'); return; }
+  if (TODAS_MARCAS_CONHECIDAS.includes(nome)) { showToast('Essa marca já está cadastrada.', 'warn'); return; }
+  try {
+    const listaFinal = [...TODAS_MARCAS_CONHECIDAS, nome].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    await db.collection('livro_facil_config').doc('marcas').set({ lista: listaFinal });
+    await db.collection('livro_facil_regra').doc(nome).set({ marca: nome, itens: [] });
+    await db.collection('livro_facil_unidades').doc(nome).set({ marca: nome, lista: [] });
+    await db.collection('livro_facil_excecoes').doc(nome).set({ marca: nome, itens: [] });
+    TODAS_MARCAS_CONHECIDAS = listaFinal;
+    byId('novaMarcaNome').value = '';
+    carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
+    renderTudo();
+    showToast(`Marca "${nome}" cadastrada. Agora vá em "Novas unidades" para adicionar as unidades, e em "Regra geral" para montar a lista.`, 'ok');
+  } catch (e) {
+    showToast('Erro ao adicionar marca: ' + e.message, 'danger');
+  }
+}
+
+
 function renderBaseAtualInfo() {
   const el = byId('baseAtualInfo'); if (!el) return;
   if (!TODAS_MARCAS_CONHECIDAS.length) { el.innerText = 'Nenhuma base carregada ainda no Firestore.'; return; }
