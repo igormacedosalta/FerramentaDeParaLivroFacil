@@ -558,38 +558,27 @@ async function criarConta() {
   byId('loginError').style.color = ''; byId('loginError').innerText = '';
   if (!email || !senha) { byId('loginError').innerText = 'Preencha e-mail e senha.'; return; }
   if (senha.length < 6) { byId('loginError').innerText = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
-  let credencial;
-  try { credencial = await auth.createUserWithEmailAndPassword(email, senha); }
+  try { await auth.createUserWithEmailAndPassword(email, senha); }
   catch (e) {
-    if (e.code === 'auth/email-already-in-use') byId('loginError').innerText = 'Já existe uma senha para este e-mail. Use "Entrar".';
+    if (e.code === 'auth/email-already-in-use') byId('loginError').innerText = 'Já existe uma senha para este e-mail (talvez de outra ferramenta sua). Use "Entrar" com essa senha.';
     else byId('loginError').innerText = 'Não foi possível criar a senha: ' + e.message;
     return;
   }
-  try {
-    const autorizado = await garantirAutorizacaoOuBootstrap(email);
-    if (!autorizado) {
-      byId('loginError').innerText = 'Este e-mail ainda não foi cadastrado pelo administrador.';
-      await credencial.user.delete().catch(() => {});
-      await auth.signOut();
-      return;
-    }
-  } catch (e) {
-    byId('loginError').innerText = 'Erro ao verificar autorização: ' + e.message;
-    await credencial.user.delete().catch(() => {});
-    await auth.signOut();
-    return;
-  }
+  // onAuthStateChanged -> processarLoginAutenticado cuida da autorização (e do bootstrap do 1º admin)
 }
 
-async function garantirAutorizacaoOuBootstrap(email) {
-  const existente = await buscarAutorizacao(email);
-  if (existente) return true;
-  const algum = await db.collection('livro_facil_usuarios').limit(1).get();
-  if (algum.empty) {
+// Se ainda ninguém é admin desta ferramenta (marcador livro_facil_config/bootstrap_admin
+// não existe), o e-mail que fizer login agora vira admin automaticamente. Roda em
+// QUALQUER login bem-sucedido (senha nova ou senha já existente de outra ferramenta sua,
+// já que a autenticação é compartilhada entre todas no mesmo projeto Firebase).
+async function tentarBootstrapAdmin(email) {
+  try {
     await db.collection('livro_facil_usuarios').doc(norm(email)).set({ email: norm(email), papel: 'admin', marcas: [] });
+    await db.collection('livro_facil_config').doc('bootstrap_admin').set({ email: norm(email), criadoEm: new Date().toISOString() });
     return true;
+  } catch (e) {
+    return false; // alguém já usou o bootstrap antes, ou a regra bloqueou por outro motivo
   }
-  return false;
 }
 
 async function processarLoginAutenticado(email) {
@@ -599,6 +588,10 @@ async function processarLoginAutenticado(email) {
     byId('loginError').innerText = 'Erro ao verificar autorização: ' + e.message;
     await auth.signOut();
     return;
+  }
+  if (!autorizacao) {
+    const virouAdmin = await tentarBootstrapAdmin(email);
+    if (virouAdmin) autorizacao = { papel: 'admin', marcas: [] };
   }
   if (!autorizacao) {
     byId('loginError').innerText = 'Seu e-mail não está autorizado. Peça para o administrador te cadastrar na aba Acessos.';
