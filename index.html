@@ -31,8 +31,8 @@
 <style>
   :root { --bg:#f7f8fb; --card:#fff; --card-alt:#fbfcfe; --text:#172033; --muted:#647084; --line:#dce1ea; --brand:#6b3fa0; --brand2:#9c6ade; --warn:#a15c00; --danger:#b3261e; --ok:#137333; --header-grad-start:#6b3fa0; --th-bg:#f1f4f8; --brand-soft-bg:#f3ecfb; --brand-soft-border:#ddc9f2; --danger-soft-bg:#fff1f0; --danger-soft-border:#ffd0cc; --ok-soft-bg:#e9f6ee; --warn-soft-bg:#fff3df; --pill-bg:#eef2f7; --pill-text:#405066; --help-bg:#f8f5fc; --help-border:#e0d3f0; --help-text:#4b2e73; }
   html[data-theme="dark"] { --bg:#12151a; --card:#1a1e25; --card-alt:#20252e; --text:#e9ebf0; --muted:#9199a8; --line:#2c3240; --brand:#b78ce8; --brand2:#cfa8f2; --warn:#e0a23c; --danger:#e2645c; --ok:#4fb789; --header-grad-start:#4b2e73; --th-bg:#20252e; --brand-soft-bg:rgba(183,140,232,.14); --brand-soft-border:rgba(183,140,232,.3); --danger-soft-bg:rgba(226,100,92,.14); --danger-soft-border:rgba(226,100,92,.3); --ok-soft-bg:rgba(79,183,137,.14); --warn-soft-bg:rgba(224,162,60,.14); --pill-bg:#232936; --pill-text:#b7c2d6; --help-bg:rgba(183,140,232,.08); --help-border:rgba(183,140,232,.25); --help-text:#d9c2f5; }
-  #themeToggle{ position:fixed; top:16px; right:16px; z-index:200; background:var(--card); border:1px solid var(--line); color:var(--text); width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
-  #themeToggle:hover{ border-color:var(--brand2); }
+  #themeToggle{ background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.4); color:#fff; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  #themeToggle:hover{ background:rgba(255,255,255,.25); }
   * { box-sizing:border-box; }
   body { margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg); color:var(--text); }
   header { background:linear-gradient(120deg,var(--header-grad-start),#2b1a45); color:white; padding:22px 28px; }
@@ -58,6 +58,8 @@
   th { background:var(--th-bg); position:sticky; top:0; z-index:1; text-align:left; font-size:12px; color:var(--text); }
   tr:hover td { background:var(--card-alt); }
   .muted { color:var(--muted); font-size:13px; }
+  .pill { display:inline-block; padding:3px 8px; border-radius:999px; background:var(--pill-bg); color:var(--pill-text); font-size:12px; font-weight:700; }
+  .pill.ok { background:var(--ok-soft-bg); color:var(--ok); }
   .stats { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:12px; }
   .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
   .stat .num { font-size:24px; font-weight:800; margin-top:4px; }
@@ -112,7 +114,6 @@
 </div>
 
 <div id="appWrap">
-<button id="themeToggle" onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button>
 <header>
   <div class="header-row">
     <div>
@@ -124,16 +125,18 @@
 </header>
 <nav>
   <button class="active" data-page="painel" onclick="mostrarPagina('painel')">1. Painel</button>
-  <button data-page="editar" onclick="mostrarPagina('editar')">2. Editar por unidade</button>
-  <button data-page="exportar" onclick="mostrarPagina('exportar')">3. Exportar</button>
-  <button data-page="basedados" onclick="mostrarPagina('basedados')" style="display:none;">4. Base de dados</button>
-  <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">5. Acessos</button>
+  <button data-page="regra" onclick="mostrarPagina('regra')">2. Regra geral</button>
+  <button data-page="excecoes" onclick="mostrarPagina('excecoes')">3. Exceções</button>
+  <button data-page="novasunidades" onclick="mostrarPagina('novasunidades')">4. Novas unidades</button>
+  <button data-page="exportar" onclick="mostrarPagina('exportar')">5. Exportar</button>
+  <button data-page="basedados" onclick="mostrarPagina('basedados')" style="display:none;">6. Base de dados</button>
+  <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">7. Acessos</button>
 </nav>
 <main>
   <section id="painel" class="page active">
     <div class="card">
       <h2>Painel geral</h2>
-      <div class="help">Visualize e filtre a lista completa (base 2026 + ajustes salvos). Use a aba "Editar por unidade" para adicionar ou remover títulos.</div>
+      <div class="help">Visualize e filtre a lista completa, já considerando a regra geral de cada marca mais as exceções de cada unidade. Use as abas "Regra geral", "Exceções" e "Novas unidades" para editar.</div>
       <div class="stats" id="statsBox"></div>
     </div>
     <div class="card">
@@ -148,33 +151,109 @@
     <div class="card"><div class="table-wrap"><table id="painelTable"></table></div></div>
   </section>
 
-  <section id="editar" class="page">
+  <section id="regra" class="page">
     <div class="card">
-      <h2>Editar por unidade</h2>
-      <div class="help">Selecione marca, unidade, turma e turno para ver, adicionar ou remover títulos. As alterações são salvas na nuvem (compartilhadas entre todos que usam a ferramenta).</div>
+      <h2>Regra geral</h2>
+      <div class="help">Aqui você define os títulos padrão de uma marca para uma série/turno — vale para <strong>todas as unidades</strong> que oferecem essa série/turno, exceto onde houver uma exceção cadastrada na aba seguinte.</div>
       <div class="grid">
-        <div><label>Marca</label><select id="eMarca" onchange="atualizarCascataEdicao('marca'); renderEdicao();"></select></div>
-        <div><label>Unidade</label><select id="eUnidade" onchange="atualizarCascataEdicao('unidade'); renderEdicao();"></select></div>
-        <div><label>Turma</label><select id="eTurma" onchange="atualizarCascataEdicao('turma'); renderEdicao();"></select></div>
-        <div><label>Turno</label><select id="eTurno" onchange="renderEdicao()"></select></div>
+        <div><label>Marca</label><select id="rMarca" onchange="atualizarCascataRegra(); renderRegra();"></select></div>
+        <div><label>Série</label><select id="rTurma" onchange="atualizarCascataRegra(); renderRegra();"></select></div>
+        <div><label>Turno</label><select id="rTurno" onchange="renderRegra()"></select></div>
       </div>
     </div>
     <div class="card">
       <div class="row-actions" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-        <strong>Títulos cadastrados para esta unidade/turma/turno</strong>
-        <button class="secondary" onclick="abrirFormAdicionar()">Adicionar título</button>
+        <strong id="regraTitulo">Títulos da regra geral</strong>
+        <button class="secondary" onclick="abrirFormRegra()">Adicionar título à regra</button>
       </div>
-      <div id="formAdicionar" style="display:none;margin-bottom:14px;padding:14px;background:var(--card-alt);border:1px solid var(--line);border-radius:12px;">
+      <div id="formRegra" style="display:none;margin-bottom:14px;padding:14px;background:var(--card-alt);border:1px solid var(--line);border-radius:12px;">
         <div class="grid">
-          <div><label>ISBN</label><input id="nISBN" placeholder="Ex.: 9788508158270"></div>
-          <div class="wide"><label>Título / Descrição</label><input id="nDescricao" placeholder="Ex.: Éramos Seis"></div>
+          <div><label>ISBN</label><input id="rgISBN" placeholder="Ex.: 9788508158270"></div>
+          <div class="wide"><label>Título / Descrição</label><input id="rgDescricao" placeholder="Ex.: Éramos Seis"></div>
         </div>
         <div class="row-actions" style="margin-top:12px;">
-          <button class="primary" onclick="salvarNovoTitulo()">Salvar título</button>
-          <button class="secondary" onclick="fecharFormAdicionar()">Cancelar</button>
+          <button class="primary" onclick="salvarItemRegra()">Salvar na regra</button>
+          <button class="secondary" onclick="fecharFormRegra()">Cancelar</button>
         </div>
       </div>
-      <div class="table-wrap"><table id="edicaoTable"></table></div>
+      <div class="table-wrap"><table id="regraTable"></table></div>
+    </div>
+  </section>
+
+  <section id="excecoes" class="page">
+    <div class="card">
+      <h2>Exceções por unidade</h2>
+      <div class="help">Use quando uma unidade específica precisa de algo diferente da regra geral: adicionar um título extra que só ela usa, ou remover um título da regra que ela não utiliza.</div>
+      <div class="grid">
+        <div><label>Marca</label><select id="xMarca" onchange="atualizarCascataExcecoes(); renderExcecoes();"></select></div>
+        <div><label>Unidade</label><select id="xUnidade" onchange="atualizarCascataExcecoes(); renderExcecoes();"></select></div>
+        <div><label>Série</label><select id="xTurma" onchange="atualizarCascataExcecoes(); renderExcecoes();"></select></div>
+        <div><label>Turno</label><select id="xTurno" onchange="renderExcecoes()"></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row-actions" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong id="excecoesTitulo">Exceções cadastradas</strong>
+        <div class="row-actions">
+          <button class="secondary" onclick="abrirFormExcecaoRemover()">Remover título da regra (exceção)</button>
+          <button class="secondary" onclick="abrirFormExcecaoAdicionar()">Adicionar título extra (exceção)</button>
+        </div>
+      </div>
+      <div id="formExcecaoAdicionar" style="display:none;margin-bottom:14px;padding:14px;background:var(--card-alt);border:1px solid var(--line);border-radius:12px;">
+        <p class="muted small" style="margin:0 0 10px;">Título extra que só esta unidade usa, além da regra geral.</p>
+        <div class="grid">
+          <div><label>ISBN</label><input id="xaISBN" placeholder="Ex.: 9788508158270"></div>
+          <div class="wide"><label>Título / Descrição</label><input id="xaDescricao" placeholder="Ex.: Éramos Seis"></div>
+        </div>
+        <div class="row-actions" style="margin-top:12px;">
+          <button class="primary" onclick="salvarExcecaoAdicionar()">Salvar exceção</button>
+          <button class="secondary" onclick="fecharFormExcecoes()">Cancelar</button>
+        </div>
+      </div>
+      <div id="formExcecaoRemover" style="display:none;margin-bottom:14px;padding:14px;background:var(--card-alt);border:1px solid var(--line);border-radius:12px;">
+        <p class="muted small" style="margin:0 0 10px;">Escolha qual título da regra geral esta unidade NÃO utiliza.</p>
+        <div class="grid">
+          <div class="wide"><label>Título da regra</label><select id="xrItem"></select></div>
+        </div>
+        <div class="row-actions" style="margin-top:12px;">
+          <button class="primary" onclick="salvarExcecaoRemover()">Salvar exceção</button>
+          <button class="secondary" onclick="fecharFormExcecoes()">Cancelar</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table id="excecoesTable"></table></div>
+    </div>
+  </section>
+
+  <section id="novasunidades" class="page">
+    <div class="card">
+      <h2>Novas unidades</h2>
+      <div class="help">Cadastre aqui uma unidade nova (que ainda não está na base de adoção). Ela passa a seguir automaticamente a regra geral da marca para a série/turno informados — se precisar de algo diferente, cadastre depois na aba "Exceções".</div>
+      <div class="grid">
+        <div><label>Marca</label><select id="uMarca"></select></div>
+        <div><label>Unidade</label><input id="uUnidade" placeholder="Ex.: Nova unidade Zona Sul"></div>
+        <div><label>Série</label><input id="uTurma" placeholder="Ex.: 1º ano"></div>
+        <div><label>Turno</label><input id="uTurno" placeholder="Ex.: Manhã"></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="primary" onclick="salvarNovaUnidade()">Adicionar unidade</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;">Ou suba uma planilha com várias unidades de uma vez</h3>
+      <div class="help">Planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno</strong> — uma linha para cada combinação de série/turno que a unidade nova vai oferecer.</div>
+      <div class="grid">
+        <div class="wide"><label>Arquivo</label><input type="file" id="unidadesArquivo" accept=".xlsx,.xls,.csv"></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="primary" onclick="processarUploadUnidades()">Processar e adicionar unidades</button>
+      </div>
+      <div id="unidadesUploadStatus" class="muted small" style="margin-top:10px;white-space:pre-wrap;"></div>
+    </div>
+    <div class="card">
+      <div class="grid">
+        <div><label>Filtrar por marca</label><select id="ufMarca" onchange="renderUnidades()"></select></div>
+      </div>
+      <div class="table-wrap" style="margin-top:10px;"><table id="unidadesTable"></table></div>
     </div>
   </section>
 
@@ -198,7 +277,7 @@
   <section id="basedados" class="page">
     <div class="card">
       <h2>Base de dados — enviar planilha</h2>
-      <div class="help">Suba aqui uma planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno, ISBN, DESCRICAO</strong> para <strong>substituir</strong> a base atual no Firestore. Os títulos que já existiam antes e continuam idênticos na planilha nova mantêm o mesmo identificador interno, então remoções feitas anteriormente continuam valendo. Títulos novos ou com qualquer campo diferente entram como registros novos.</div>
+      <div class="help">Suba aqui uma planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno, ISBN, DESCRICAO</strong> para <strong>substituir por completo</strong> a regra geral, as unidades e as exceções das marcas presentes no arquivo. A ferramenta calcula sozinha: o que é igual em todas as unidades de uma série/turno vira <em>regra geral</em>; o que só existe em algumas unidades vira <em>exceção</em>. Use isso para uma recarga completa da base (ex.: início de um novo ciclo). Para ajustes do dia a dia, use as abas Regra geral / Exceções / Novas unidades.</div>
       <div class="grid">
         <div class="wide"><label>Arquivo (.xlsx, .xls ou .csv)</label><input type="file" id="baseArquivo" accept=".xlsx,.xls,.csv"></div>
       </div>
@@ -239,6 +318,12 @@ function uniq(arr){ return [...new Set(arr.filter(v=>v!==undefined && v!==null &
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
 function slugify(s) { return String(s); } // ID do doc = nome da marca, igual ao padrão do De/Para
+function limparCampo(v) { if (v === null || v === undefined) return ''; return String(v).replace(/\t/g,' ').trim().replace(/\s+/g,' '); }
+function hashId(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return 'H' + (h >>> 0).toString(36);
+}
 
 /* ======================= TEMA CLARO/ESCURO ======================= */
 function aplicarTema(tema) {
@@ -269,87 +354,92 @@ function mostrarPagina(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
   document.querySelectorAll('nav button[data-page]').forEach(b=>b.classList.toggle('active', b.dataset.page===id));
   if (id==='painel') { atualizarPainelCascata(true); renderPainel(); }
-  if (id==='editar') { atualizarCascataEdicao('marca'); renderEdicao(); }
+  if (id==='regra') { atualizarCascataRegra(); renderRegra(); }
+  if (id==='excecoes') { atualizarCascataExcecoes(); renderExcecoes(); }
+  if (id==='novasunidades') { popularSelectMarcaTravavel('uMarca'); popularSelect('ufMarca', marcasPermitidas(), true); renderUnidades(); }
   if (id==='exportar') atualizarPreviewExport();
   if (id==='basedados') renderBaseAtualInfo();
   if (id==='acessos') renderAdminUsuarios();
 }
 
-/* ======================= DADOS: BASE (Firestore) + EDIÇÕES (Firestore) ======================= */
-// A base 2026 mora no Firestore, um documento por marca (coleção livro_facil_base),
-// e as edições (remoções/adições) também, um documento por marca (livro_facil_edicoes).
-// Cada usuário só consegue ler/gravar os documentos das marcas que tem permissão
-// (isso é garantido pelas regras de segurança do Firestore, não só pela interface).
-let baseData = [];       // registros da base, já com o campo Marca preenchido
-let edicoesPorMarca = {}; // { marcaSlug: { removidos: [...], adicionados: [...] } }
-let unsubscribesEdicoes = [];
-let marcasCarregadas = []; // marcas cujo base+edições já foram buscadas
+/* ======================= DADOS: REGRA GERAL + UNIDADES + EXCEÇÕES (Firestore) =======================
+   Modelo:
+   - livro_facil_regra/{marca}      -> { itens: [{id,Turma,Turno,ISBN,Descricao}] }         (vale p/ todas as unidades da marca)
+   - livro_facil_unidades/{marca}   -> { lista: [{id,Unidade,Turma,Turno}] }                  (roster: quais unidades existem)
+   - livro_facil_excecoes/{marca}   -> { itens: [{id,Unidade,Turma,Turno,tipo,ISBN,Descricao}] } (tipo: 'adicionar' | 'remover')
+   Lista efetiva de uma unidade = itens da regra geral (Turma+Turno), MENOS os removidos por
+   exceção, MAIS os adicionados por exceção. */
+let regraPorMarca = {};
+let unidadesPorMarca = {};
+let excecoesPorMarca = {};
+let unsubscribes = [];
+let marcasCarregadas = [];
 
-async function carregarMarca(marca) {
-  const slug = slugify(marca);
-  // base (uma vez, muda raramente)
-  try {
-    const doc = await db.collection('livro_facil_base').doc(slug).get();
-    if (doc.exists) {
-      const registros = (doc.data().registros || []).map(r => ({ ...r, Marca: marca }));
-      baseData = baseData.filter(r => r.Marca !== marca).concat(registros);
-    } else {
-      showToast(`Ainda não há base no Firestore para "${marca}". Rode o migrador primeiro.`, 'warn');
-    }
-  } catch (e) {
-    showToast(`Erro ao carregar base de "${marca}": ` + e.message, 'danger');
-  }
-  // edições (tempo real, várias pessoas podem editar)
-  const unsub = db.collection('livro_facil_edicoes').doc(slug).onSnapshot(doc => {
-    edicoesPorMarca[slug] = doc.exists ? doc.data() : { removidos: [], adicionados: [] };
+function marcasPermitidas() { return restrictMarcas || TODAS_MARCAS_CONHECIDAS; }
+
+function carregarMarca(marca) {
+  const u1 = db.collection('livro_facil_regra').doc(marca).onSnapshot(doc => {
+    regraPorMarca[marca] = doc.exists ? (doc.data().itens || []) : [];
     renderTudo();
-  }, e => showToast(`Erro ao sincronizar edições de "${marca}": ` + e.message, 'danger'));
-  unsubscribesEdicoes.push(unsub);
+  }, e => showToast(`Erro ao sincronizar regra de "${marca}": ` + e.message, 'danger'));
+  const u2 = db.collection('livro_facil_unidades').doc(marca).onSnapshot(doc => {
+    unidadesPorMarca[marca] = doc.exists ? (doc.data().lista || []) : [];
+    renderTudo();
+  }, e => showToast(`Erro ao sincronizar unidades de "${marca}": ` + e.message, 'danger'));
+  const u3 = db.collection('livro_facil_excecoes').doc(marca).onSnapshot(doc => {
+    excecoesPorMarca[marca] = doc.exists ? (doc.data().itens || []) : [];
+    renderTudo();
+  }, e => showToast(`Erro ao sincronizar exceções de "${marca}": ` + e.message, 'danger'));
+  unsubscribes.push(u1, u2, u3);
   marcasCarregadas.push(marca);
 }
 
-async function carregarMarcasPermitidas(marcas) {
-  baseData = [];
-  edicoesPorMarca = {};
-  unsubscribesEdicoes.forEach(u => u());
-  unsubscribesEdicoes = [];
+function carregarMarcasPermitidas(marcas) {
+  regraPorMarca = {}; unidadesPorMarca = {}; excecoesPorMarca = {};
+  unsubscribes.forEach(u => u()); unsubscribes = [];
   marcasCarregadas = [];
-  await Promise.all(marcas.map(m => carregarMarca(m)));
+  marcas.forEach(m => carregarMarca(m));
+}
+
+function itensEfetivosUnidade(marca, unidade, turma, turno) {
+  const regraItens = (regraPorMarca[marca] || []).filter(r => r.Turma === turma && r.Turno === turno);
+  const excs = (excecoesPorMarca[marca] || []).filter(e => e.Unidade === unidade && e.Turma === turma && e.Turno === turno);
+  const removerChaves = new Set(excs.filter(e => e.tipo === 'remover').map(e => e.ISBN + '|||' + e.Descricao));
+  const vistos = new Set();
+  const resultado = [];
+  regraItens.forEach(r => {
+    const chave = r.ISBN + '|||' + r.Descricao;
+    if (removerChaves.has(chave) || vistos.has(chave)) return;
+    vistos.add(chave);
+    resultado.push({ ISBN: r.ISBN, Descricao: r.Descricao });
+  });
+  excs.filter(e => e.tipo === 'adicionar').forEach(e => {
+    const chave = e.ISBN + '|||' + e.Descricao;
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    resultado.push({ ISBN: e.ISBN, Descricao: e.Descricao });
+  });
+  return resultado;
 }
 
 function dadosAtuais() {
   const resultado = [];
   marcasCarregadas.forEach(marca => {
-    const slug = slugify(marca);
-    const ed = edicoesPorMarca[slug] || { removidos: [], adicionados: [] };
-    const removidosSet = new Set(ed.removidos || []);
-    baseData.filter(r => r.Marca === marca && !removidosSet.has(r.id)).forEach(r => resultado.push(r));
-    (ed.adicionados || []).forEach(r => resultado.push({ ...r, Marca: marca }));
+    (unidadesPorMarca[marca] || []).forEach(u => {
+      itensEfetivosUnidade(marca, u.Unidade, u.Turma, u.Turno).forEach(item => {
+        resultado.push({ Marca: marca, Unidade: u.Unidade, Turma: u.Turma, Turno: u.Turno, ISBN: item.ISBN, Descricao: item.Descricao });
+      });
+    });
   });
   return resultado;
 }
-
-// dadosAtuais() já respeita a marca do diretor, pois só carregamos as marcas
-// permitidas para ele — mas mantemos o nome dadosVisiveis() para compatibilidade
-// com o resto do código.
 function dadosVisiveis() { return dadosAtuais(); }
 
-async function salvarEdicoesMarca(marca) {
-  const slug = slugify(marca);
-  const ed = edicoesPorMarca[slug] || { removidos: [], adicionados: [] };
-  try {
-    await db.collection('livro_facil_edicoes').doc(slug).set(ed);
-  } catch (e) {
-    console.error('Erro ao salvar edições', e);
-    showToast('Erro ao salvar: ' + e.message, 'danger');
-  }
-}
-
 function renderTudo() {
-  atualizarPainelCascata(false);
-  renderPainel();
-  atualizarCascataEdicao('marca');
-  renderEdicao();
+  atualizarPainelCascata(false); renderPainel();
+  atualizarCascataRegra(); renderRegra();
+  atualizarCascataExcecoes(); renderExcecoes();
+  popularSelectMarcaTravavel('uMarca'); popularSelect('ufMarca', marcasPermitidas(), true); renderUnidades();
   atualizarPreviewExport();
 }
 
@@ -360,6 +450,12 @@ function popularSelect(selectId, valores, comTodos) {
   const distintos = uniq(valores).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
   sel.innerHTML = (comTodos ? '<option value="">Todos</option>' : '') + distintos.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
   if (distintos.includes(atual)) sel.value = atual;
+}
+// Popula um select de Marca e trava se o diretor só tem uma marca.
+function popularSelectMarcaTravavel(selectId) {
+  popularSelect(selectId, marcasPermitidas(), false);
+  const sel = byId(selectId); if (!sel) return;
+  if (restrictMarcas && restrictMarcas.length === 1) { sel.value = restrictMarcas[0]; sel.disabled = true; }
 }
 
 /* ======================= PAINEL ======================= */
@@ -396,7 +492,7 @@ function renderPainel() {
   `;
 
   const cols = ['Marca','Unidade','Turma','Turno','ISBN','Descricao'];
-  let html = '<thead><tr>' + cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
+  let html = '<thead><tr>' + cols.map(c=>`<th>${escapeHtml(c==='Descricao'?'Descrição':c)}</th>`).join('') + '</tr></thead><tbody>';
   filtrados.slice(0, 3000).forEach(r => {
     html += '<tr>' + cols.map(c=>`<td>${escapeHtml(r[c])}</td>`).join('') + '</tr>';
   });
@@ -404,73 +500,232 @@ function renderPainel() {
   byId('painelTable').innerHTML = html;
 }
 
-/* ======================= EDITAR POR UNIDADE ======================= */
-function atualizarCascataEdicao(nivel) {
-  const dados = dadosVisiveis();
-  popularSelect('eMarca', dados.map(r=>r.Marca), false);
-  if (restrictMarcas && restrictMarcas.length === 1) { byId('eMarca').value = restrictMarcas[0]; byId('eMarca').disabled = true; }
-  const marca = byId('eMarca').value;
-  popularSelect('eUnidade', dados.filter(r=>r.Marca===marca).map(r=>r.Unidade), false);
-  const unidade = byId('eUnidade').value;
-  popularSelect('eTurma', dados.filter(r=>r.Marca===marca && r.Unidade===unidade).map(r=>r.Turma), false);
-  const turma = byId('eTurma').value;
-  popularSelect('eTurno', dados.filter(r=>r.Marca===marca && r.Unidade===unidade && r.Turma===turma).map(r=>r.Turno), false);
+/* ======================= REGRA GERAL ======================= */
+function atualizarCascataRegra() {
+  popularSelectMarcaTravavel('rMarca');
+  const marca = byId('rMarca').value;
+  const combos = unidadesPorMarca[marca] || [];
+  popularSelect('rTurma', combos.map(c=>c.Turma), false);
+  const turma = byId('rTurma').value;
+  popularSelect('rTurno', combos.filter(c=>c.Turma===turma).map(c=>c.Turno), false);
 }
 
-function abrirFormAdicionar() {
-  byId('formAdicionar').style.display = 'block';
-}
-function fecharFormAdicionar() {
-  byId('formAdicionar').style.display = 'none';
-  byId('nISBN').value = ''; byId('nDescricao').value = '';
-}
-
-async function salvarNovoTitulo() {
-  const marca = byId('eMarca').value, unidade = byId('eUnidade').value, turma = byId('eTurma').value, turno = byId('eTurno').value;
-  if (!marca || !unidade || !turma || !turno) { showToast('Selecione marca, unidade, turma e turno primeiro.', 'warn'); return; }
-  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
-  const descricao = byId('nDescricao').value.trim();
-  if (!descricao) { showToast('Informe o título/descrição.', 'warn'); return; }
-  const slug = slugify(marca);
-  if (!edicoesPorMarca[slug]) edicoesPorMarca[slug] = { removidos: [], adicionados: [] };
-  const ed = edicoesPorMarca[slug];
-  const proximo = (ed.adicionados || []).reduce((max,a)=>Math.max(max, parseInt(String(a.id).replace('A',''),10)||0), 0) + 1;
-  ed.adicionados = (ed.adicionados || []).concat([{
-    id: 'A' + String(proximo).padStart(5, '0'),
-    Unidade: unidade, Turma: turma, Turno: turno,
-    ISBN: byId('nISBN').value.trim(), Descricao: descricao
-  }]);
-  await salvarEdicoesMarca(marca);
-  fecharFormAdicionar();
-  showToast('Título adicionado.', 'ok');
-}
-
-async function removerTitulo(id, marca) {
-  if (!confirm('Remover este título da lista?')) return;
-  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
-  const slug = slugify(marca);
-  if (!edicoesPorMarca[slug]) edicoesPorMarca[slug] = { removidos: [], adicionados: [] };
-  const ed = edicoesPorMarca[slug];
-  if (id.startsWith('A')) {
-    ed.adicionados = (ed.adicionados || []).filter(a => a.id !== id);
-  } else {
-    ed.removidos = ed.removidos || [];
-    if (!ed.removidos.includes(id)) ed.removidos.push(id);
-  }
-  await salvarEdicoesMarca(marca);
-  showToast('Título removido.', 'ok');
-}
-
-function renderEdicao() {
-  const marca = byId('eMarca').value, unidade = byId('eUnidade').value, turma = byId('eTurma').value, turno = byId('eTurno').value;
-  const dados = dadosVisiveis().filter(r => r.Marca === marca && r.Unidade === unidade && r.Turma === turma && r.Turno === turno);
-  const cols = ['ISBN','Descricao'];
-  let html = '<thead><tr>' + cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('') + '<th></th></tr></thead><tbody>';
-  dados.forEach(r => {
-    html += '<tr>' + cols.map(c=>`<td>${escapeHtml(r[c])}</td>`).join('') + `<td><button class="danger" onclick="removerTitulo('${r.id}','${escapeAttr(r.Marca)}')">Remover</button></td></tr>`;
+function renderRegra() {
+  const marca = byId('rMarca').value, turma = byId('rTurma').value, turno = byId('rTurno').value;
+  byId('regraTitulo').innerText = marca && turma && turno ? `Regra geral — ${marca} · ${turma} · ${turno}` : 'Regra geral';
+  const itens = (regraPorMarca[marca] || []).filter(r=>r.Turma===turma && r.Turno===turno)
+    .slice().sort((a,b)=>a.Descricao.localeCompare(b.Descricao,'pt-BR'));
+  let html = '<thead><tr><th>Série</th><th>Turno</th><th>ISBN</th><th>Descrição</th><th></th></tr></thead><tbody>';
+  itens.forEach(it => {
+    html += `<tr><td>${escapeHtml(turma)}</td><td>${escapeHtml(turno)}</td><td>${escapeHtml(it.ISBN)}</td><td>${escapeHtml(it.Descricao)}</td>` +
+      `<td><button class="danger" onclick="removerItemRegra('${it.id}')">Remover da regra</button></td></tr>`;
   });
   html += '</tbody>';
-  byId('edicaoTable').innerHTML = html;
+  byId('regraTable').innerHTML = html;
+}
+
+function abrirFormRegra() { byId('formRegra').style.display = 'block'; }
+function fecharFormRegra() { byId('formRegra').style.display = 'none'; byId('rgISBN').value=''; byId('rgDescricao').value=''; }
+
+async function salvarItemRegra() {
+  const marca = byId('rMarca').value, turma = byId('rTurma').value, turno = byId('rTurno').value;
+  if (!marca || !turma || !turno) { showToast('Selecione marca, série e turno.', 'warn'); return; }
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const descricao = byId('rgDescricao').value.trim();
+  if (!descricao) { showToast('Informe o título/descrição.', 'warn'); return; }
+  const isbn = byId('rgISBN').value.trim();
+  const id = hashId([marca,turma,turno,isbn,descricao].join('|'));
+  if (!regraPorMarca[marca]) regraPorMarca[marca] = [];
+  if (regraPorMarca[marca].some(r=>r.id===id)) { showToast('Este título já está na regra geral.', 'warn'); return; }
+  regraPorMarca[marca] = regraPorMarca[marca].concat([{ id, Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao }]);
+  await salvarRegraMarca(marca);
+  fecharFormRegra();
+  showToast('Título adicionado à regra geral.', 'ok');
+}
+
+async function removerItemRegra(id) {
+  const marca = byId('rMarca').value;
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  if (!confirm('Remover este título da regra geral? Ele deixa de valer para todas as unidades que seguem essa regra (unidades que já tinham ele como exceção "adicionar" continuam com ele).')) return;
+  regraPorMarca[marca] = (regraPorMarca[marca] || []).filter(r => r.id !== id);
+  await salvarRegraMarca(marca);
+  showToast('Removido da regra geral.', 'ok');
+}
+
+async function salvarRegraMarca(marca) {
+  try { await db.collection('livro_facil_regra').doc(marca).set({ marca, itens: regraPorMarca[marca] || [] }); }
+  catch (e) { showToast('Erro ao salvar regra: ' + e.message, 'danger'); }
+}
+
+/* ======================= EXCEÇÕES ======================= */
+function atualizarCascataExcecoes() {
+  popularSelectMarcaTravavel('xMarca');
+  const marca = byId('xMarca').value;
+  const combos = unidadesPorMarca[marca] || [];
+  popularSelect('xUnidade', combos.map(c=>c.Unidade), false);
+  const unidade = byId('xUnidade').value;
+  popularSelect('xTurma', combos.filter(c=>c.Unidade===unidade).map(c=>c.Turma), false);
+  const turma = byId('xTurma').value;
+  popularSelect('xTurno', combos.filter(c=>c.Unidade===unidade && c.Turma===turma).map(c=>c.Turno), false);
+}
+
+function renderExcecoes() {
+  const marca = byId('xMarca').value, unidade = byId('xUnidade').value, turma = byId('xTurma').value, turno = byId('xTurno').value;
+  byId('excecoesTitulo').innerText = unidade ? `Exceções — ${unidade} · ${turma} · ${turno}` : 'Exceções cadastradas';
+  const itens = (excecoesPorMarca[marca] || []).filter(e => e.Unidade===unidade && e.Turma===turma && e.Turno===turno);
+  let html = '<thead><tr><th>Unidade</th><th>Série</th><th>Turno</th><th>Tipo</th><th>ISBN</th><th>Descrição</th><th></th></tr></thead><tbody>';
+  itens.forEach(e => {
+    const tipoLabel = e.tipo === 'adicionar' ? '<span class="pill ok">Adicionar</span>' : '<span class="pill">Remover</span>';
+    html += `<tr><td>${escapeHtml(e.Unidade)}</td><td>${escapeHtml(e.Turma)}</td><td>${escapeHtml(e.Turno)}</td><td>${tipoLabel}</td>` +
+      `<td>${escapeHtml(e.ISBN)}</td><td>${escapeHtml(e.Descricao)}</td><td><button class="danger" onclick="removerExcecao('${e.id}')">Remover exceção</button></td></tr>`;
+  });
+  html += '</tbody>';
+  byId('excecoesTable').innerHTML = html;
+}
+
+function abrirFormExcecaoAdicionar() {
+  byId('formExcecaoAdicionar').style.display = 'block';
+  byId('formExcecaoRemover').style.display = 'none';
+}
+function abrirFormExcecaoRemover() {
+  const marca = byId('xMarca').value, turma = byId('xTurma').value, turno = byId('xTurno').value;
+  const itensRegra = (regraPorMarca[marca] || []).filter(r => r.Turma===turma && r.Turno===turno);
+  if (!itensRegra.length) { showToast('Não há itens na regra geral para esta série/turno.', 'warn'); return; }
+  byId('xrItem').innerHTML = itensRegra.map(r=>`<option value="${escapeAttr(r.ISBN+'|||'+r.Descricao)}">${escapeHtml(r.Descricao)} (${escapeHtml(r.ISBN)})</option>`).join('');
+  byId('formExcecaoRemover').style.display = 'block';
+  byId('formExcecaoAdicionar').style.display = 'none';
+}
+function fecharFormExcecoes() {
+  byId('formExcecaoAdicionar').style.display = 'none';
+  byId('formExcecaoRemover').style.display = 'none';
+  byId('xaISBN').value=''; byId('xaDescricao').value='';
+}
+
+async function salvarExcecaoAdicionar() {
+  const marca = byId('xMarca').value, unidade = byId('xUnidade').value, turma = byId('xTurma').value, turno = byId('xTurno').value;
+  if (!marca || !unidade || !turma || !turno) { showToast('Selecione marca, unidade, série e turno.', 'warn'); return; }
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const descricao = byId('xaDescricao').value.trim();
+  if (!descricao) { showToast('Informe o título/descrição.', 'warn'); return; }
+  const isbn = byId('xaISBN').value.trim();
+  const id = hashId(['add',marca,unidade,turma,turno,isbn,descricao].join('|'));
+  if (!excecoesPorMarca[marca]) excecoesPorMarca[marca] = [];
+  if (excecoesPorMarca[marca].some(e=>e.id===id)) { showToast('Essa exceção já existe.', 'warn'); return; }
+  excecoesPorMarca[marca] = excecoesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno, tipo: 'adicionar', ISBN: isbn, Descricao: descricao }]);
+  await salvarExcecoesMarca(marca);
+  fecharFormExcecoes();
+  showToast('Exceção salva.', 'ok');
+}
+
+async function salvarExcecaoRemover() {
+  const marca = byId('xMarca').value, unidade = byId('xUnidade').value, turma = byId('xTurma').value, turno = byId('xTurno').value;
+  if (!marca || !unidade || !turma || !turno) { showToast('Selecione marca, unidade, série e turno.', 'warn'); return; }
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const valor = byId('xrItem').value;
+  if (!valor) { showToast('Escolha um título da regra.', 'warn'); return; }
+  const [isbn, descricao] = valor.split('|||');
+  const id = hashId(['rem',marca,unidade,turma,turno,isbn,descricao].join('|'));
+  if (!excecoesPorMarca[marca]) excecoesPorMarca[marca] = [];
+  if (excecoesPorMarca[marca].some(e=>e.id===id)) { showToast('Essa exceção já existe.', 'warn'); return; }
+  excecoesPorMarca[marca] = excecoesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno, tipo: 'remover', ISBN: isbn, Descricao: descricao }]);
+  await salvarExcecoesMarca(marca);
+  fecharFormExcecoes();
+  showToast('Exceção salva.', 'ok');
+}
+
+async function removerExcecao(id) {
+  const marca = byId('xMarca').value;
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  if (!confirm('Remover esta exceção?')) return;
+  excecoesPorMarca[marca] = (excecoesPorMarca[marca] || []).filter(e => e.id !== id);
+  await salvarExcecoesMarca(marca);
+  showToast('Exceção removida.', 'ok');
+}
+
+async function salvarExcecoesMarca(marca) {
+  try { await db.collection('livro_facil_excecoes').doc(marca).set({ marca, itens: excecoesPorMarca[marca] || [] }); }
+  catch (e) { showToast('Erro ao salvar exceção: ' + e.message, 'danger'); }
+}
+
+/* ======================= NOVAS UNIDADES ======================= */
+async function salvarNovaUnidade() {
+  const marca = byId('uMarca').value;
+  const unidade = limparCampo(byId('uUnidade').value);
+  const turma = limparCampo(byId('uTurma').value);
+  const turno = limparCampo(byId('uTurno').value);
+  if (!marca || !unidade || !turma || !turno) { showToast('Preencha marca, unidade, série e turno.', 'warn'); return; }
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  const id = hashId([marca,unidade,turma,turno].join('|'));
+  if (!unidadesPorMarca[marca]) unidadesPorMarca[marca] = [];
+  if (unidadesPorMarca[marca].some(u=>u.id===id)) { showToast('Essa unidade/série/turno já existe.', 'warn'); return; }
+  unidadesPorMarca[marca] = unidadesPorMarca[marca].concat([{ id, Unidade: unidade, Turma: turma, Turno: turno }]);
+  await salvarUnidadesMarca(marca);
+  byId('uUnidade').value=''; byId('uTurma').value=''; byId('uTurno').value='';
+  showToast('Unidade adicionada — já segue a regra geral automaticamente.', 'ok');
+}
+
+async function processarUploadUnidades() {
+  const arquivo = byId('unidadesArquivo').files[0];
+  const status = byId('unidadesUploadStatus');
+  if (!arquivo) { alert('Selecione o arquivo primeiro.'); return; }
+  status.innerText = 'Lendo arquivo...';
+  try {
+    const buf = await arquivo.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+    let adicionadas = 0, ignoradas = 0;
+    const porMarca = {};
+    rows.forEach(row => {
+      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = limparCampo(row['Turma']), turno = limparCampo(row['Turno']);
+      if (!marca || !unidade || !turma || !turno) { ignoradas++; return; }
+      if (restrictMarcas && !restrictMarcas.includes(marca)) { ignoradas++; return; }
+      if (!porMarca[marca]) porMarca[marca] = [];
+      porMarca[marca].push({ unidade, turma, turno });
+    });
+    for (const marca of Object.keys(porMarca)) {
+      if (!unidadesPorMarca[marca]) unidadesPorMarca[marca] = [];
+      porMarca[marca].forEach(({ unidade, turma, turno }) => {
+        const id = hashId([marca,unidade,turma,turno].join('|'));
+        if (!unidadesPorMarca[marca].some(u=>u.id===id)) { unidadesPorMarca[marca].push({ id, Unidade: unidade, Turma: turma, Turno: turno }); adicionadas++; }
+      });
+      await salvarUnidadesMarca(marca);
+    }
+    status.innerText = `Concluído: ${adicionadas} combinação(ões) adicionada(s). ${ignoradas ? ignoradas + ' linha(s) ignorada(s) (marca sem permissão ou campo faltando).' : ''}`;
+    showToast('Unidades atualizadas.', 'ok');
+  } catch (e) {
+    status.innerText = 'Erro ao processar o arquivo: ' + e.message;
+  }
+}
+
+async function salvarUnidadesMarca(marca) {
+  try { await db.collection('livro_facil_unidades').doc(marca).set({ marca, lista: unidadesPorMarca[marca] || [] }); }
+  catch (e) { showToast('Erro ao salvar unidades: ' + e.message, 'danger'); }
+}
+
+async function removerUnidade(marca, id) {
+  if (restrictMarcas && !restrictMarcas.includes(marca)) { showToast('Você não tem permissão para editar esta marca.', 'danger'); return; }
+  if (!confirm('Remover esta combinação de unidade/série/turno? Ela deixa de aparecer no Painel e na Exportação.')) return;
+  unidadesPorMarca[marca] = (unidadesPorMarca[marca] || []).filter(u => u.id !== id);
+  await salvarUnidadesMarca(marca);
+  showToast('Unidade removida.', 'ok');
+}
+
+function renderUnidades() {
+  const marcaFiltro = byId('ufMarca').value;
+  let linhas = [];
+  Object.keys(unidadesPorMarca).forEach(marca => {
+    if (marcaFiltro && marca !== marcaFiltro) return;
+    (unidadesPorMarca[marca] || []).forEach(u => linhas.push({ marca, ...u }));
+  });
+  linhas.sort((a,b)=> a.marca.localeCompare(b.marca,'pt-BR') || a.Unidade.localeCompare(b.Unidade,'pt-BR'));
+  let html = '<thead><tr><th>Marca</th><th>Unidade</th><th>Série</th><th>Turno</th><th></th></tr></thead><tbody>';
+  linhas.forEach(u => {
+    html += `<tr><td>${escapeHtml(u.marca)}</td><td>${escapeHtml(u.Unidade)}</td><td>${escapeHtml(u.Turma)}</td><td>${escapeHtml(u.Turno)}</td>` +
+      `<td><button class="danger" onclick="removerUnidade('${escapeAttr(u.marca)}','${u.id}')">Remover</button></td></tr>`;
+  });
+  html += '</tbody>';
+  byId('unidadesTable').innerHTML = html;
 }
 
 /* ======================= EXPORTAR ======================= */
@@ -603,8 +858,8 @@ async function processarLoginAutenticado(email) {
 }
 
 function logout() {
-  unsubscribesEdicoes.forEach(u => u());
-  unsubscribesEdicoes = [];
+  unsubscribes.forEach(u => u());
+  unsubscribes = [];
   currentUser = null;
   restrictMarcas = null;
   auth.signOut();
@@ -624,7 +879,7 @@ async function mostrarApp() {
   byId('appWrap').style.display = 'block';
   const isAdmin = currentUser.papel === 'admin';
   const tag = isAdmin ? 'Admin' : ('Diretor · ' + currentUser.marcas.map(escapeHtml).join(', '));
-  byId('userBadge').innerHTML = `<div class="name">${escapeHtml(currentUser.email)}</div><div class="tag">${tag}</div><button onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button><button onclick="logout()">Sair</button>`;
+  byId('userBadge').innerHTML = `<div class="name">${escapeHtml(currentUser.email)}</div><div class="tag">${tag}</div><button id="themeToggle" onclick="alternarTema()" title="Alternar tema claro/escuro">🌙</button><button onclick="logout()">Sair</button>`;
   document.querySelectorAll('nav button[data-page="acessos"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('nav button[data-page="basedados"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   showToast('Carregando dados da nuvem...', 'ok');
@@ -632,35 +887,25 @@ async function mostrarApp() {
   TODAS_MARCAS_CONHECIDAS = await carregarListaDeMarcas();
   if (isAdmin) {
     restrictMarcas = null;
-    await carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
+    carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
     renderAdminUsuarios();
+    if (!TODAS_MARCAS_CONHECIDAS.length) showToast('Nenhuma marca carregada — confira se a Base de dados já foi enviada.', 'warn');
   } else {
     restrictMarcas = currentUser.marcas;
-    await carregarMarcasPermitidas(currentUser.marcas);
+    carregarMarcasPermitidas(currentUser.marcas);
+    if (!currentUser.marcas.length) showToast('Você ainda não tem nenhuma marca liberada. Peça para o administrador te cadastrar na aba Acessos.', 'warn');
   }
   renderTudo();
-  if (!marcasCarregadas.length) showToast('Nenhuma marca carregada — confira se o migrador já rodou e se livro_facil_config/marcas existe.', 'warn');
 }
 
-/* ======================= BASE DE DADOS (admin) — upload de planilha ======================= */
-// Hash estável a partir dos campos-chave do registro: assim, se a mesma linha
-// (mesma Marca/Unidade/Turma/Turno/ISBN/Descrição) aparecer numa planilha nova,
-// ela recebe o MESMO id de antes — então remoções salvas continuam valendo.
-function hashId(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return 'L' + (h >>> 0).toString(36);
-}
-
-function limparCampo(v) {
-  if (v === null || v === undefined) return '';
-  return String(v).replace(/\t/g, ' ').trim().replace(/\s+/g, ' ');
-}
-
+/* ======================= BASE DE DADOS (admin) — upload de planilha completa ======================= */
 function renderBaseAtualInfo() {
   const el = byId('baseAtualInfo'); if (!el) return;
   if (!TODAS_MARCAS_CONHECIDAS.length) { el.innerText = 'Nenhuma base carregada ainda no Firestore.'; return; }
-  el.innerText = `Base atual: ${TODAS_MARCAS_CONHECIDAS.length} marca(s) — ${dadosAtuais().length.toLocaleString('pt-BR')} título(s) no total (considerando apenas as marcas já carregadas nesta sessão).`;
+  const totalUnidades = Object.values(unidadesPorMarca).reduce((s,l)=>s+l.length,0);
+  const totalRegra = Object.values(regraPorMarca).reduce((s,l)=>s+l.length,0);
+  const totalExc = Object.values(excecoesPorMarca).reduce((s,l)=>s+l.length,0);
+  el.innerText = `Base atual: ${TODAS_MARCAS_CONHECIDAS.length} marca(s), ${totalUnidades} combinação(ões) unidade/série/turno, ${totalRegra} título(s) na regra geral, ${totalExc} exceção(ões).`;
 }
 
 async function processarUploadBase() {
@@ -674,36 +919,83 @@ async function processarUploadBase() {
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const rowsRaw = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
-    const porMarca = {};
+    const porMarcaBruto = {};
     let ignoradas = 0;
     rowsRaw.forEach(row => {
-      const marca = limparCampo(row['Marca']);
-      const unidade = limparCampo(row['Unidade']);
-      const turma = limparCampo(row['Turma']);
-      const turno = limparCampo(row['Turno']);
+      const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = limparCampo(row['Turma']), turno = limparCampo(row['Turno']);
       const isbn = limparCampo(row['ISBN']);
       const descricao = limparCampo(row['DESCRICAO'] ?? row['Descricao'] ?? row['Descrição']);
       if (!marca || !unidade || !turma || !turno || !descricao) { ignoradas++; return; }
-      const id = hashId([marca, unidade, turma, turno, isbn, descricao].join('|'));
-      if (!porMarca[marca]) porMarca[marca] = [];
-      porMarca[marca].push({ id, Unidade: unidade, Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao });
+      if (!porMarcaBruto[marca]) porMarcaBruto[marca] = [];
+      porMarcaBruto[marca].push({ unidade, turma, turno, isbn, descricao });
     });
 
-    const marcas = Object.keys(porMarca).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const marcas = Object.keys(porMarcaBruto).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     if (!marcas.length) { status.innerText = 'Nenhuma linha válida encontrada. Confira as colunas: Marca, Unidade, Turma, Turno, ISBN, DESCRICAO.'; return; }
+    status.innerText = `Processando ${marcas.length} marca(s)...`;
 
-    status.innerText = `Enviando ${marcas.length} marca(s) para o Firestore...`;
     for (const marca of marcas) {
-      await db.collection('livro_facil_base').doc(marca).set({ marca, registros: porMarca[marca] });
-      status.innerText += `\nOK  ${marca} — ${porMarca[marca].length} títulos`;
+      const linhas = porMarcaBruto[marca];
+
+      const unidadesMap = new Map();
+      linhas.forEach(l => {
+        const id = hashId([marca,l.unidade,l.turma,l.turno].join('|'));
+        if (!unidadesMap.has(id)) unidadesMap.set(id, { id, Unidade: l.unidade, Turma: l.turma, Turno: l.turno });
+      });
+      const unidadesLista = [...unidadesMap.values()];
+
+      // agrupa por combo Turma+Turno pra achar o que é comum (regra) e o que é exceção
+      const combos = {};
+      linhas.forEach(l => {
+        const comboKey = l.turma + '|||' + l.turno;
+        if (!combos[comboKey]) combos[comboKey] = { unidades: new Set(), titulosPorUnidade: {}, itensPorChave: {} };
+        const c = combos[comboKey];
+        c.unidades.add(l.unidade);
+        const chave = l.isbn + '|||' + l.descricao;
+        c.itensPorChave[chave] = { isbn: l.isbn, descricao: l.descricao };
+        if (!c.titulosPorUnidade[l.unidade]) c.titulosPorUnidade[l.unidade] = new Set();
+        c.titulosPorUnidade[l.unidade].add(chave);
+      });
+
+      const regraItens = [];
+      const excecoesItens = [];
+      Object.keys(combos).forEach(comboKey => {
+        const [turma, turno] = comboKey.split('|||');
+        const c = combos[comboKey];
+        const unidadesDoCombo = [...c.unidades];
+        const todasChaves = Object.keys(c.itensPorChave);
+        const comuns = todasChaves.filter(chave => unidadesDoCombo.every(u => c.titulosPorUnidade[u].has(chave)));
+        const comunsSet = new Set(comuns);
+        comuns.forEach(chave => {
+          const { isbn, descricao } = c.itensPorChave[chave];
+          regraItens.push({ id: hashId([marca,turma,turno,isbn,descricao].join('|')), Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao });
+        });
+        unidadesDoCombo.forEach(u => {
+          c.titulosPorUnidade[u].forEach(chave => {
+            if (comunsSet.has(chave)) return;
+            const { isbn, descricao } = c.itensPorChave[chave];
+            excecoesItens.push({ id: hashId(['add',marca,u,turma,turno,isbn,descricao].join('|')), Unidade: u, Turma: turma, Turno: turno, tipo: 'adicionar', ISBN: isbn, Descricao: descricao });
+          });
+        });
+      });
+
+      regraPorMarca[marca] = regraItens;
+      unidadesPorMarca[marca] = unidadesLista;
+      excecoesPorMarca[marca] = excecoesItens;
+
+      await db.collection('livro_facil_regra').doc(marca).set({ marca, itens: regraItens });
+      await db.collection('livro_facil_unidades').doc(marca).set({ marca, lista: unidadesLista });
+      await db.collection('livro_facil_excecoes').doc(marca).set({ marca, itens: excecoesItens });
+      status.innerText += `\nOK  ${marca} — ${unidadesLista.length} unidade(s), ${regraItens.length} título(s) na regra, ${excecoesItens.length} exceção(ões)`;
     }
-    await db.collection('livro_facil_config').doc('marcas').set({ lista: marcas });
+
+    const listaFinal = [...new Set([...TODAS_MARCAS_CONHECIDAS, ...marcas])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    await db.collection('livro_facil_config').doc('marcas').set({ lista: listaFinal });
     status.innerText += `\n\nConcluído. ${ignoradas ? ignoradas + ' linha(s) ignorada(s) por falta de algum campo obrigatório.' : ''}`;
     showToast('Base atualizada no Firestore.', 'ok');
 
-    // recarrega a base na tela sem precisar deslogar
-    TODAS_MARCAS_CONHECIDAS = marcas;
-    await carregarMarcasPermitidas(marcas);
+    TODAS_MARCAS_CONHECIDAS = listaFinal;
+    carregarMarcasPermitidas(currentUser.papel === 'admin' ? TODAS_MARCAS_CONHECIDAS : currentUser.marcas);
     renderTudo();
     renderBaseAtualInfo();
   } catch (e) {
@@ -803,3 +1095,4 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
