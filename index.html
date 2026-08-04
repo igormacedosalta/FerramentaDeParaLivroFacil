@@ -287,6 +287,16 @@
       </div>
     </div>
     <div class="card">
+      <h2>Remover marca da lista ativa</h2>
+      <div class="help">Uma marca que não veio numa planilha nova (porque não existe mais, ou porque a planilha era só de outras marcas) continua aparecendo nos filtros e no cadastro de acesso até ser removida daqui manualmente. Isso não apaga os dados dela do banco — só tira ela da lista de marcas ativas. Se precisar reativar, é só subir a base dela de novo ou cadastrá-la como marca nova.</div>
+      <div class="grid">
+        <div class="wide"><label>Marca</label><select id="removerMarcaSelect"></select></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;">
+        <button class="danger" onclick="removerMarcaDaLista()">Remover da lista</button>
+      </div>
+    </div>
+    <div class="card">
       <h2>Base de dados — enviar planilha</h2>
       <div class="help">Suba aqui uma planilha (.xlsx ou .csv) com as colunas <strong>Marca, Unidade, Turma, Turno, ISBN, DESCRICAO</strong> para <strong>substituir por completo</strong> a regra geral, as unidades e as exceções das marcas presentes no arquivo. A ferramenta calcula sozinha: o que é igual em todas as unidades de uma série/turno vira <em>regra geral</em>; o que só existe em algumas unidades vira <em>exceção</em>. Use isso para uma recarga completa da base (ex.: início de um novo ciclo). Para ajustes do dia a dia, use as abas Regra geral / Exceções / Novas unidades.</div>
       <div class="grid">
@@ -956,6 +966,7 @@ async function adicionarMarcaNova() {
     byId('novaMarcaNome').value = '';
     carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
     renderTudo();
+    renderBaseAtualInfo();
     await registrarHistorico(nome, `Cadastrou a marca "${nome}" (sem base histórica)`);
     showToast(`Marca "${nome}" cadastrada. Agora vá em "Novas unidades" para adicionar as unidades, e em "Regra geral" para montar a lista.`, 'ok');
   } catch (e) {
@@ -965,12 +976,31 @@ async function adicionarMarcaNova() {
 
 
 function renderBaseAtualInfo() {
+  popularSelect('removerMarcaSelect', TODAS_MARCAS_CONHECIDAS, false);
   const el = byId('baseAtualInfo'); if (!el) return;
   if (!TODAS_MARCAS_CONHECIDAS.length) { el.innerText = 'Nenhuma base carregada ainda no Firestore.'; return; }
   const totalUnidades = Object.values(unidadesPorMarca).reduce((s,l)=>s+l.length,0);
   const totalRegra = Object.values(regraPorMarca).reduce((s,l)=>s+l.length,0);
   const totalExc = Object.values(excecoesPorMarca).reduce((s,l)=>s+l.length,0);
   el.innerText = `Base atual: ${TODAS_MARCAS_CONHECIDAS.length} marca(s), ${totalUnidades} combinação(ões) unidade/série/turno, ${totalRegra} título(s) na regra geral, ${totalExc} exceção(ões).`;
+}
+
+async function removerMarcaDaLista() {
+  const marca = byId('removerMarcaSelect').value;
+  if (!marca) { showToast('Selecione uma marca.', 'warn'); return; }
+  if (!confirm(`Remover "${marca}" da lista de marcas ativas? Ela deixa de aparecer nos filtros e no cadastro de acesso de diretores. Os dados dela continuam guardados no banco, caso precise reativar depois.`)) return;
+  try {
+    const listaFinal = TODAS_MARCAS_CONHECIDAS.filter(m => m !== marca);
+    await db.collection('livro_facil_config').doc('marcas').set({ lista: listaFinal });
+    TODAS_MARCAS_CONHECIDAS = listaFinal;
+    carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
+    renderTudo();
+    renderBaseAtualInfo();
+    await registrarHistorico(marca, `Removeu a marca "${marca}" da lista de marcas ativas`);
+    showToast(`Marca "${marca}" removida da lista.`, 'ok');
+  } catch (e) {
+    showToast('Erro ao remover marca: ' + e.message, 'danger');
+  }
 }
 
 async function processarUploadBase() {
