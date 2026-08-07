@@ -1057,12 +1057,18 @@ async function processarUploadBase() {
 
     const porMarcaBruto = {};
     let ignoradas = 0;
+    let semUso = 0;
     rowsRaw.forEach(row => {
       const marca = limparCampo(row['Marca']), unidade = limparCampo(row['Unidade']), turma = normalizarTurma(row['Turma']), turno = normalizarTurma(row['Turno']);
       const isbn = limparCampo(row['ISBN']);
       const descricao = limparCampo(row['DESCRICAO'] ?? row['Descricao'] ?? row['Descrição']);
-      if (!marca || !unidade || !turma || !turno || !descricao) { ignoradas++; return; }
+      if (!marca || !unidade || !turma || !turno) { ignoradas++; return; }
       if (!porMarcaBruto[marca]) porMarcaBruto[marca] = [];
+      // "Não utiliza" é um placeholder da planilha (ISBN "n/a") indicando que a unidade não usa
+      // nenhum livro nessa série/turno — registramos a unidade/série/turno mesmo assim (ela existe),
+      // só não tratamos como um título de verdade.
+      const semUsoNesta = !descricao || descricao.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'nao utiliza';
+      if (semUsoNesta) { semUso++; porMarcaBruto[marca].push({ unidade, turma, turno, isbn: null, descricao: null }); return; }
       porMarcaBruto[marca].push({ unidade, turma, turno, isbn, descricao });
     });
 
@@ -1087,28 +1093,35 @@ async function processarUploadBase() {
         if (!combos[comboKey]) combos[comboKey] = { unidades: new Set(), titulosPorUnidade: {}, itensPorChave: {} };
         const c = combos[comboKey];
         c.unidades.add(l.unidade);
+        if (!c.titulosPorUnidade[l.unidade]) c.titulosPorUnidade[l.unidade] = new Set();
+        if (l.descricao === null) return; // linha "não utiliza": conta a unidade, não conta título
         const chave = l.isbn + '|||' + l.descricao;
         c.itensPorChave[chave] = { isbn: l.isbn, descricao: l.descricao };
-        if (!c.titulosPorUnidade[l.unidade]) c.titulosPorUnidade[l.unidade] = new Set();
         c.titulosPorUnidade[l.unidade].add(chave);
       });
 
+      // Regra geral = títulos usados pela MAIORIA das unidades daquele combo (mais de 50%).
+      // Isso evita que uma ou duas unidades com dados incompletos/parciais zerem a regra
+      // (antes exigíamos que TODAS as unidades tivessem exatamente os mesmos títulos).
       const regraItens = [];
       const excecoesItens = [];
       Object.keys(combos).forEach(comboKey => {
         const [turma, turno] = comboKey.split('|||');
         const c = combos[comboKey];
         const unidadesDoCombo = [...c.unidades];
+        const totalUnidades = unidadesDoCombo.length;
         const todasChaves = Object.keys(c.itensPorChave);
-        const comuns = todasChaves.filter(chave => unidadesDoCombo.every(u => c.titulosPorUnidade[u].has(chave)));
-        const comunsSet = new Set(comuns);
-        comuns.forEach(chave => {
+        const maioria = todasChaves.filter(chave =>
+          unidadesDoCombo.filter(u => c.titulosPorUnidade[u].has(chave)).length > totalUnidades / 2
+        );
+        const maioriaSet = new Set(maioria);
+        maioria.forEach(chave => {
           const { isbn, descricao } = c.itensPorChave[chave];
           regraItens.push({ id: hashId([marca,turma,turno,isbn,descricao].join('|')), Turma: turma, Turno: turno, ISBN: isbn, Descricao: descricao });
         });
         unidadesDoCombo.forEach(u => {
           c.titulosPorUnidade[u].forEach(chave => {
-            if (comunsSet.has(chave)) return;
+            if (maioriaSet.has(chave)) return;
             const { isbn, descricao } = c.itensPorChave[chave];
             excecoesItens.push({ id: hashId(['add',marca,u,turma,turno,isbn,descricao].join('|')), Unidade: u, Turma: turma, Turno: turno, tipo: 'adicionar', ISBN: isbn, Descricao: descricao });
           });
@@ -1128,7 +1141,7 @@ async function processarUploadBase() {
 
     const listaFinal = [...new Set([...TODAS_MARCAS_CONHECIDAS, ...marcas])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     await db.collection('livro_facil_config').doc('marcas').set({ lista: listaFinal });
-    status.innerText += `\n\nConcluído. ${ignoradas ? ignoradas + ' linha(s) ignorada(s) por falta de algum campo obrigatório.' : ''}`;
+    status.innerText += `\n\nConcluído. ${ignoradas ? ignoradas + ' linha(s) ignorada(s) por falta de algum campo obrigatório. ' : ''}${semUso ? semUso + ' linha(s) "Não utiliza" reconhecidas (unidade contada, sem título).' : ''}`;
     showToast('Base atualizada no Firestore.', 'ok');
 
     TODAS_MARCAS_CONHECIDAS = listaFinal;
