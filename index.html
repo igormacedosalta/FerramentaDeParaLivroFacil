@@ -132,6 +132,7 @@
   <button data-page="basedados" onclick="mostrarPagina('basedados')" style="display:none;">6. Base de dados</button>
   <button data-page="historico" onclick="mostrarPagina('historico')" style="display:none;">7. Histórico</button>
   <button data-page="acessos" onclick="mostrarPagina('acessos')" style="display:none;">8. Acessos</button>
+  <button data-page="ordemturmas" onclick="mostrarPagina('ordemturmas')" style="display:none;">9. Ordem das séries</button>
 </nav>
 <main>
   <section id="painel" class="page active">
@@ -343,6 +344,22 @@
       <div class="table-wrap" style="margin-top:10px;"><table id="adminTable"></table></div>
     </div>
   </section>
+
+  <section id="ordemturmas" class="page">
+    <div class="card">
+      <h2>Ordem das séries</h2>
+      <div class="help">Define em que ordem as séries aparecem nos filtros da ferramenta (Painel, Regra geral, Exceções, Exportar). Use as setas para reordenar. Séries que ainda não têm posição definida aparecem na segunda tabela, em ordem alfabética no final da lista, até você indicar onde encaixá-las.</div>
+      <div class="row-actions" style="margin-bottom:12px;">
+        <button class="secondary" onclick="carregarOrdemPadrao()">Carregar lista padrão do Grupo Salta</button>
+      </div>
+      <div class="table-wrap"><table id="ordemTurmasTable"></table></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;">Séries detectadas sem posição definida</h3>
+      <p class="muted small" id="turmasSemOrdemInfo"></p>
+      <div class="table-wrap"><table id="turmasSemOrdemTable"></table></div>
+    </div>
+  </section>
 </main>
 <div id="toastContainer"></div>
 </div>
@@ -400,6 +417,7 @@ function mostrarPagina(id) {
   if (id==='basedados') renderBaseAtualInfo();
   if (id==='historico') renderHistorico();
   if (id==='acessos') renderAdminUsuarios();
+  if (id==='ordemturmas') renderOrdemTurmas();
 }
 
 /* ======================= DADOS: REGRA GERAL + UNIDADES + EXCEÇÕES (Firestore) =======================
@@ -413,6 +431,7 @@ let regraPorMarca = {};
 let unidadesPorMarca = {};
 let excecoesPorMarca = {};
 let unsubscribes = [];
+let unsubscribeOrdem = null;
 let marcasCarregadas = [];
 
 function marcasPermitidas() { return restrictMarcas || TODAS_MARCAS_CONHECIDAS; }
@@ -484,10 +503,25 @@ function renderTudo() {
 }
 
 /* ======================= FILTROS (selects) ======================= */
-function popularSelect(selectId, valores, comTodos) {
+let ordemTurmas = []; // ordem customizada das séries (livro_facil_config/ordem_turmas)
+function indexOrdemTurma(turma) {
+  const i = ordemTurmas.indexOf(turma);
+  return i === -1 ? 9999 : i;
+}
+
+function popularSelect(selectId, valores, comTodos, ordenarPorSerie) {
   const sel = byId(selectId); if (!sel) return;
   const atual = sel.value;
-  const distintos = uniq(valores).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+  let distintos = uniq(valores);
+  if (ordenarPorSerie) {
+    distintos = distintos.sort((a,b) => {
+      const ia = indexOrdemTurma(a), ib = indexOrdemTurma(b);
+      if (ia !== ib) return ia - ib;
+      return String(a).localeCompare(String(b), 'pt-BR');
+    });
+  } else {
+    distintos = distintos.sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+  }
   sel.innerHTML = (comTodos ? '<option value="">Todos</option>' : '') + distintos.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
   if (distintos.includes(atual)) sel.value = atual;
 }
@@ -506,7 +540,7 @@ function atualizarPainelCascata(resetDownstream) {
   if (resetDownstream) { byId('pfUnidade').value=''; byId('pfTurma').value=''; byId('pfTurno').value=''; }
   popularSelect('pfUnidade', dados.filter(r=>!marca || r.Marca===marca).map(r=>r.Unidade), true);
   const unidade = byId('pfUnidade').value;
-  popularSelect('pfTurma', dados.filter(r=>(!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade)).map(r=>r.Turma), true);
+  popularSelect('pfTurma', dados.filter(r=>(!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade)).map(r=>r.Turma), true, true);
   popularSelect('pfTurno', dados.filter(r=>(!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade)).map(r=>r.Turno), true);
 }
 
@@ -545,7 +579,7 @@ function atualizarCascataRegra() {
   popularSelectMarcaTravavel('rMarca');
   const marca = byId('rMarca').value;
   const combos = unidadesPorMarca[marca] || [];
-  popularSelect('rTurma', combos.map(c=>c.Turma), false);
+  popularSelect('rTurma', combos.map(c=>c.Turma), false, true);
   const turma = byId('rTurma').value;
   popularSelect('rTurno', combos.filter(c=>c.Turma===turma).map(c=>c.Turno), false);
 }
@@ -607,7 +641,7 @@ function atualizarCascataExcecoes() {
   const combos = unidadesPorMarca[marca] || [];
   popularSelect('xUnidade', combos.map(c=>c.Unidade), false);
   const unidade = byId('xUnidade').value;
-  popularSelect('xTurma', combos.filter(c=>c.Unidade===unidade).map(c=>c.Turma), false);
+  popularSelect('xTurma', combos.filter(c=>c.Unidade===unidade).map(c=>c.Turma), false, true);
   const turma = byId('xTurma').value;
   popularSelect('xTurno', combos.filter(c=>c.Unidade===unidade && c.Turma===turma).map(c=>c.Turno), false);
 }
@@ -799,7 +833,7 @@ function linhasFiltradasExport() {
   const marca = byId('xfMarca').value;
   popularSelect('xfUnidade', dados.filter(r=>!marca || r.Marca===marca).map(r=>r.Unidade), true);
   const unidade = byId('xfUnidade').value;
-  popularSelect('xfTurma', dados.filter(r=>(!marca||r.Marca===marca) && (!unidade||r.Unidade===unidade)).map(r=>r.Turma), true);
+  popularSelect('xfTurma', dados.filter(r=>(!marca||r.Marca===marca) && (!unidade||r.Unidade===unidade)).map(r=>r.Turma), true, true);
   popularSelect('xfTurno', dados.filter(r=>(!marca||r.Marca===marca) && (!unidade||r.Unidade===unidade)).map(r=>r.Turno), true);
   const turma = byId('xfTurma').value, turno = byId('xfTurno').value;
   return dados.filter(r => (!marca || r.Marca===marca) && (!unidade || r.Unidade===unidade) && (!turma || r.Turma===turma) && (!turno || r.Turno===turno));
@@ -912,6 +946,7 @@ async function processarLoginAutenticado(email) {
 function logout() {
   unsubscribes.forEach(u => u());
   unsubscribes = [];
+  if (unsubscribeOrdem) { unsubscribeOrdem(); unsubscribeOrdem = null; }
   currentUser = null;
   restrictMarcas = null;
   auth.signOut();
@@ -935,9 +970,15 @@ async function mostrarApp() {
   document.querySelectorAll('nav button[data-page="acessos"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('nav button[data-page="basedados"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   document.querySelectorAll('nav button[data-page="historico"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('nav button[data-page="ordemturmas"]').forEach(b => b.style.display = isAdmin ? '' : 'none');
   showToast('Carregando dados da nuvem...', 'ok');
 
   TODAS_MARCAS_CONHECIDAS = await carregarListaDeMarcas();
+  if (unsubscribeOrdem) unsubscribeOrdem();
+  unsubscribeOrdem = db.collection('livro_facil_config').doc('ordem_turmas').onSnapshot(doc => {
+    ordemTurmas = doc.exists ? (doc.data().lista || []) : [];
+    renderTudo();
+  }, e => console.error('Erro ao sincronizar ordem das séries', e));
   if (isAdmin) {
     restrictMarcas = null;
     carregarMarcasPermitidas(TODAS_MARCAS_CONHECIDAS);
@@ -1133,6 +1174,87 @@ function renderHistorico() {
   }).catch(e => {
     byId('historicoInfo').innerText = 'Erro ao carregar histórico: ' + e.message;
   });
+}
+
+/* ======================= ORDEM DAS SÉRIES (admin) ======================= */
+const ORDEM_PADRAO_TURMAS = ["Infantil 0","Infantil 1","Infantil 2","Infantil 3","Infantil 4","Infantil 5",
+  "Infantil 2 Bilíngue","Infantil 3 Bilíngue","Infantil 4 Bilíngue","Infantil 5 Bilíngue",
+  "1º Ano","2º Ano","3º Ano","4º Ano","5º Ano",
+  "1º Ano Bilíngue","2º Ano Bilíngue","3º Ano Bilíngue","4º Ano Bilíngue","5º Ano Bilíngue",
+  "6º Ano","7º Ano","8º Ano","9º Ano","1ª Série","2ª Série","3ª Série","Extensivo","Medicina"];
+
+async function carregarOrdemPadrao() {
+  if (ordemTurmas.length && !confirm('Já existe uma ordem configurada. Substituir pela lista padrão do Grupo Salta?')) return;
+  ordemTurmas = ORDEM_PADRAO_TURMAS.slice();
+  await salvarOrdemTurmas();
+  await registrarHistorico(null, 'Carregou a ordem padrão de séries do Grupo Salta');
+  renderOrdemTurmas();
+  renderTudo();
+  showToast('Ordem padrão aplicada.', 'ok');
+}
+
+function turmasDetectadas() {
+  const todas = new Set();
+  Object.values(unidadesPorMarca).forEach(lista => (lista || []).forEach(u => todas.add(u.Turma)));
+  Object.values(regraPorMarca).forEach(lista => (lista || []).forEach(r => todas.add(r.Turma)));
+  return [...todas].filter(t => t);
+}
+
+function renderOrdemTurmas() {
+  let html = '<thead><tr><th>#</th><th>Série</th><th></th></tr></thead><tbody>';
+  ordemTurmas.forEach((t, i) => {
+    html += `<tr><td>${i+1}</td><td>${escapeHtml(t)}</td><td class="row-actions">` +
+      `<button class="secondary" onclick="moverOrdemTurma(${i},-1)" ${i===0?'disabled':''}>▲</button>` +
+      `<button class="secondary" onclick="moverOrdemTurma(${i},1)" ${i===ordemTurmas.length-1?'disabled':''}>▼</button>` +
+      `<button class="danger" onclick="removerOrdemTurma(${i})">Remover</button></td></tr>`;
+  });
+  html += '</tbody>';
+  byId('ordemTurmasTable').innerHTML = html;
+
+  const detectadas = turmasDetectadas().filter(t => !ordemTurmas.includes(t)).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  let html2 = '<thead><tr><th>Série detectada</th><th>Posição</th><th></th></tr></thead><tbody>';
+  detectadas.forEach(t => {
+    const inputId = 'pos_' + hashId(t);
+    html2 += `<tr><td>${escapeHtml(t)}</td><td><input type="number" min="1" max="${ordemTurmas.length+1}" value="${ordemTurmas.length+1}" id="${inputId}" style="width:90px;"></td>` +
+      `<td><button class="primary" onclick="inserirOrdemTurma('${escapeAttr(t)}','${inputId}')">Inserir</button></td></tr>`;
+  });
+  html2 += '</tbody>';
+  byId('turmasSemOrdemTable').innerHTML = html2;
+  byId('turmasSemOrdemInfo').innerText = detectadas.length
+    ? `${detectadas.length} série(s) encontrada(s) na base sem posição definida (aparecem em ordem alfabética, depois das que já têm posição).`
+    : 'Todas as séries encontradas na base já têm posição definida.';
+}
+
+async function moverOrdemTurma(i, delta) {
+  const j = i + delta;
+  if (j < 0 || j >= ordemTurmas.length) return;
+  [ordemTurmas[i], ordemTurmas[j]] = [ordemTurmas[j], ordemTurmas[i]];
+  await salvarOrdemTurmas();
+  renderOrdemTurmas();
+}
+
+async function removerOrdemTurma(i) {
+  if (!confirm('Remover esta série da lista de ordenação? Ela volta a aparecer em ordem alfabética, no final da lista.')) return;
+  const nome = ordemTurmas[i];
+  ordemTurmas.splice(i, 1);
+  await salvarOrdemTurmas();
+  await registrarHistorico(null, `Removeu "${nome}" da ordenação de séries`);
+  renderOrdemTurmas();
+}
+
+async function inserirOrdemTurma(turma, inputId) {
+  const pos = Math.max(1, Math.min(ordemTurmas.length + 1, parseInt(byId(inputId).value, 10) || (ordemTurmas.length + 1)));
+  ordemTurmas.splice(pos - 1, 0, turma);
+  await salvarOrdemTurmas();
+  await registrarHistorico(null, `Definiu a posição ${pos} para a série "${turma}" na ordenação`);
+  renderOrdemTurmas();
+  renderTudo();
+  showToast(`"${turma}" adicionada na posição ${pos}.`, 'ok');
+}
+
+async function salvarOrdemTurmas() {
+  try { await db.collection('livro_facil_config').doc('ordem_turmas').set({ lista: ordemTurmas }); }
+  catch (e) { showToast('Erro ao salvar ordem: ' + e.message, 'danger'); }
 }
 
 /* ======================= ACESSOS (admin) ======================= */
